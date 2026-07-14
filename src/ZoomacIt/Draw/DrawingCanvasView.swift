@@ -1,5 +1,6 @@
 import AppKit
 import CoreGraphics
+import QuartzCore
 import ScreenCaptureKit
 
 /// The main NSView subclass that implements the 3-layer compositing architecture
@@ -46,6 +47,18 @@ final class DrawingCanvasView: NSView {
     private var dragOrigin: CGPoint = .zero
     private var freehandPoints: [CGPoint] = []
     private var isDragging: Bool = false
+
+    // MARK: - Vanishing Pen
+
+    /// Strokes drawn while `drawingState.isVanishingPenEnabled` is true.
+    /// Never baked into `finishedLayer` — rendered live in `draw(_:)` with
+    /// a per-stroke fade alpha, and dropped once fully faded.
+    private var vanishingStrokes: [Stroke] = []
+
+    /// Drives the fade animation while `vanishingStrokes` is non-empty.
+    /// Started lazily on the first vanishing stroke, stopped once the
+    /// array empties out (so an idle canvas burns no CPU).
+    private var vanishingTimer: Timer?
 
     // MARK: - Text Mode
 
@@ -402,18 +415,23 @@ final class DrawingCanvasView: NSView {
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         let shapeType = drawingState.currentShapeType(modifiers: modifiers)
 
-        // Push current state for undo
-        strokeManager.pushUndoSnapshot(
-            finishedLayer,
-            backgroundMode: drawingState.backgroundMode,
-            spotlightRect: drawingState.spotlightRect
-        )
+        if drawingState.isVanishingPenEnabled {
+            vanishingStrokes.append(makeVanishingStroke(shapeType: shapeType, endPoint: currentPoint))
+            startVanishingTimerIfNeeded()
+        } else {
+            // Push current state for undo
+            strokeManager.pushUndoSnapshot(
+                finishedLayer,
+                backgroundMode: drawingState.backgroundMode,
+                spotlightRect: drawingState.spotlightRect
+            )
 
-        // Composite the completed stroke onto finishedLayer
-        finishedLayer = compositeStrokeOntoFinished(
-            shapeType: shapeType,
-            endPoint: currentPoint
-        )
+            // Composite the completed stroke onto finishedLayer
+            finishedLayer = compositeStrokeOntoFinished(
+                shapeType: shapeType,
+                endPoint: currentPoint
+            )
+        }
 
         // Clear transient layers
         previewLayer = nil
@@ -472,6 +490,9 @@ final class DrawingCanvasView: NSView {
                 spotlightRect: drawingState.spotlightRect
             )
             finishedLayer = nil
+            vanishingStrokes.removeAll()
+            vanishingTimer?.invalidate()
+            vanishingTimer = nil
             setNeedsDisplay(bounds)
 
         // Whiteboard
@@ -499,6 +520,11 @@ final class DrawingCanvasView: NSView {
         // Text mode
         case "T":
             enterTextMode()
+
+        // Toggle Vanishing Pen mode
+        case "V":
+            drawingState.isVanishingPenEnabled.toggle()
+            setNeedsDisplay(bounds)
 
         // Tab key for ellipse (track as key, not modifier)
         case "\t":
@@ -672,6 +698,46 @@ final class DrawingCanvasView: NSView {
         bitmapContext.strokePath()
 
         return bitmapContext.makeImage()
+    }
+
+    /// Captures the just-finished stroke's geometry/style into a `Stroke`
+    /// for the Vanishing Pen live collection, instead of rasterizing it.
+    private func makeVanishingStroke(shapeType: ShapeType, endPoint: CGPoint) -> Stroke {
+        Stroke(
+            points: freehandPoints,
+            startPoint: dragOrigin,
+            endPoint: endPoint,
+            color: drawingState.currentNSColor,
+            lineWidth: drawingState.penWidth,
+            shapeType: shapeType,
+            isHighlighter: drawingState.isHighlighterMode
+        )
+    }
+
+    // MARK: - Vanishing Pen Timer
+
+    private func startVanishingTimerIfNeeded() {
+        guard vanishingTimer == nil else { return }
+        let timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in
+            self?.tickVanishingStrokes()
+        }
+        // .common lets the timer keep firing while a mouse drag is being
+        // tracked (the default run loop mode pauses during tracking loops).
+        RunLoop.main.add(timer, forMode: .common)
+        vanishingTimer = timer
+    }
+
+    private func tickVanishingStrokes() {
+        let now = CACurrentMediaTime()
+        let lifetime = Settings.shared.vanishingPenLifetime
+        vanishingStrokes.removeAll {
+            VanishingPenFader.isExpired(createdAt: $0.createdAt, now: now, lifetime: lifetime)
+        }
+        setNeedsDisplay(bounds)
+        if vanishingStrokes.isEmpty {
+            vanishingTimer?.invalidate()
+            vanishingTimer = nil
+        }
     }
 
     // MARK: - Undo
