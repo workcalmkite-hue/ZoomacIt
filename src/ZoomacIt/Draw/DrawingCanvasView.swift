@@ -962,6 +962,16 @@ final class DrawingCanvasView: NSView {
             context.draw(finished, in: CGRect(origin: .zero, size: size))
         }
 
+        // Vanishing Pen strokes — export at their current on-screen fade
+        // state (WYSIWYG), same alpha math as the live draw(_:) pass.
+        if !vanishingStrokes.isEmpty {
+            let now = CACurrentMediaTime()
+            let lifetime = Settings.shared.vanishingPenLifetime
+            for stroke in vanishingStrokes {
+                drawVanishingStroke(stroke, now: now, lifetime: lifetime, in: context)
+            }
+        }
+
         return context.makeImage()
     }
 
