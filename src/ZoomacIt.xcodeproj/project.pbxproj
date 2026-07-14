@@ -34,6 +34,7 @@
 		8C86FC94752D7A7E397DE877 /* ZoomMathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 122958CC072CEF51A4973BAD /* ZoomMathTests.swift */; };
 		8EB5433F06804DD1E27E51DF /* ShapeRendererTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8699BCE233A5E7F09663017F /* ShapeRendererTests.swift */; };
 		8EF72DE97F310702D4924D99 /* LiveZoomWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3884984CB5B8714C1CB6DAE7 /* LiveZoomWindowController.swift */; };
+		D1E2F3A4B5C6D7E8F9A0B1C2 /* VanishingPenFaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2B1A0F9E8D7C6B5A4F3E2D1 /* VanishingPenFaderTests.swift */; };
 		9582B9FF70AFDB7FD8FC292D /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A978FA296EF6E99DE42DE5A5 /* SettingsWindowController.swift */; };
 		9DF3FA34ED77F2109586D4B5 /* StillZoomView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02D0969B89076B7BC986452B /* StillZoomView.swift */; };
 		B4CBD67B2A6AEEB3109F5792 /* CGContextExtensionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A10C3F6A8082DAF58EE6949 /* CGContextExtensionsTests.swift */; };
@@ -46,6 +47,7 @@
 		C93442BB6C4635032200E48B /* ShapeRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 478A14C839BA1275E186312E /* ShapeRenderer.swift */; };
 		CB7DAA6D3BA711D13B9C0D94 /* FreehandRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 068AF06DCD4187879DA06178 /* FreehandRenderer.swift */; };
 		D4EFADF937D92699DC1BB041 /* DrawTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10D373A688250139487280BB /* DrawTab.swift */; };
+		A1B2C3D4E5F6A7B8C9D0E1F2 /* VanishingPenFader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C2D3E4F5A6B7C8D9E0F1A2 /* VanishingPenFader.swift */; };
 		DD29E7A2CA8719348BC7F361 /* DrawingCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E069EC8EF00483692203882 /* DrawingCanvasView.swift */; };
 		E5D3BADF6F8A9BB8A808F28D /* BreakTimerTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15F0FBF26F55526DA1BEF95E /* BreakTimerTab.swift */; };
 		E9920C14A86002F653920D7E /* OverlayWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 167B3BE9B273B7B056C41CD5 /* OverlayWindow.swift */; };
@@ -102,6 +104,8 @@
 		84315B937F6619F5764F7B7F /* ZoomacIt-Release.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "ZoomacIt-Release.entitlements"; sourceTree = "<group>"; };
 		8699BCE233A5E7F09663017F /* ShapeRendererTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShapeRendererTests.swift; sourceTree = "<group>"; };
 		8E069EC8EF00483692203882 /* DrawingCanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrawingCanvasView.swift; sourceTree = "<group>"; };
+		C2B1A0F9E8D7C6B5A4F3E2D1 /* VanishingPenFaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VanishingPenFaderTests.swift; sourceTree = "<group>"; };
+		B1C2D3E4F5A6B7C8D9E0F1A2 /* VanishingPenFader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VanishingPenFader.swift; sourceTree = "<group>"; };
 		9059A7F84AC48FE489FC4064 /* OverlayWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayWindowController.swift; sourceTree = "<group>"; };
 		972CA1E50E6818D068D22333 /* TextInputController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextInputController.swift; sourceTree = "<group>"; };
 		A3EBA7640893729E53D436F6 /* GeneralTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralTab.swift; sourceTree = "<group>"; };
@@ -128,6 +132,7 @@
 				478A14C839BA1275E186312E /* ShapeRenderer.swift */,
 				5D7EC7D8734530BA2E376139 /* StrokeManager.swift */,
 				972CA1E50E6818D068D22333 /* TextInputController.swift */,
+				B1C2D3E4F5A6B7C8D9E0F1A2 /* VanishingPenFader.swift */,
 			);
 			path = Draw;
 			sourceTree = "<group>";
@@ -211,6 +216,7 @@
 				8699BCE233A5E7F09663017F /* ShapeRendererTests.swift */,
 				453513CAB75B5909A1521589 /* StrokeManagerTests.swift */,
 				2C8A2C544CC0510AA2EA9A06 /* StrokeTests.swift */,
+				C2B1A0F9E8D7C6B5A4F3E2D1 /* VanishingPenFaderTests.swift */,
 				122958CC072CEF51A4973BAD /* ZoomMathTests.swift */,
 			);
 			path = ZoomacItTests;
@@ -368,6 +374,7 @@
 				8EB5433F06804DD1E27E51DF /* ShapeRendererTests.swift in Sources */,
 				7A1095C1C52F1230FDBE9403 /* StrokeManagerTests.swift in Sources */,
 				839745DED3A5B203A6A1FE49 /* StrokeTests.swift in Sources */,
+				D1E2F3A4B5C6D7E8F9A0B1C2 /* VanishingPenFaderTests.swift in Sources */,
 				8C86FC94752D7A7E397DE877 /* ZoomMathTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -406,6 +413,7 @@
 				41011F5512E5B70E02211DF4 /* Stroke.swift in Sources */,
 				1EF7046471522CBF02EE3D9D /* StrokeManager.swift in Sources */,
 				F5CC9D2C9692AEFD40DA3C32 /* TextInputController.swift in Sources */,
+				A1B2C3D4E5F6A7B8C9D0E1F2 /* VanishingPenFader.swift in Sources */,
 				339CC2FB51A6EF14F65F3FA0 /* ZoomMath.swift in Sources */,
 				376EF34728C48AC7B965A664 /* ZoomTab.swift in Sources */,
 				F9EEAA4E36082073D7CDBDF7 /* main.swift in Sources */,
