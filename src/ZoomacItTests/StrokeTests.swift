@@ -1,4 +1,5 @@
 import XCTest
+import QuartzCore
 @testable import ZoomacIt
 
 final class StrokeTests: XCTestCase {
@@ -53,5 +54,32 @@ final class StrokeTests: XCTestCase {
     func testShapeTypeEquality() {
         XCTAssertEqual(ShapeType.freehand, ShapeType.freehand)
         XCTAssertNotEqual(ShapeType.line, ShapeType.arrow)
+    }
+
+    // MARK: - Vanishing Pen fields
+
+    func testDefaultIdIsUnique() {
+        let a = Stroke()
+        let b = Stroke()
+        XCTAssertNotEqual(a.id, b.id)
+    }
+
+    func testDefaultCreatedAtIsRecent() {
+        let before = CACurrentMediaTime()
+        let stroke = Stroke()
+        let after = CACurrentMediaTime()
+        XCTAssertGreaterThanOrEqual(stroke.createdAt, before)
+        XCTAssertLessThanOrEqual(stroke.createdAt, after)
+    }
+
+    func testCustomCreatedAt() {
+        let stroke = Stroke(createdAt: 100.0)
+        XCTAssertEqual(stroke.createdAt, 100.0)
+    }
+
+    func testCustomId() {
+        let id = UUID()
+        let stroke = Stroke(id: id)
+        XCTAssertEqual(stroke.id, id)
     }
 }
