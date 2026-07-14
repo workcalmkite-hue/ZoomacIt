@@ -5,6 +5,7 @@ struct DrawTab: View {
 
     @AppStorage(Settings.Keys.defaultPenColor) private var penColorRaw: String = PenColor.red.rawValue
     @AppStorage(Settings.Keys.defaultPenWidth) private var penWidth: Double = 3.0
+    @AppStorage(Settings.Keys.vanishingPenLifetime) private var vanishingPenLifetime: Double = 3.0
     @AppStorage(Settings.Keys.highlighterOpacity) private var highlighterOpacity: Double = 0.35
     @AppStorage(Settings.Keys.highlighterWidthMultiplier) private var highlighterMultiplier: Double = 4.0
     @AppStorage(Settings.Keys.spotlightDarkness) private var spotlightDarkness: Double = 0.6
@@ -44,6 +45,16 @@ struct DrawTab: View {
                     Text("Default Width")
                     Slider(value: $penWidth, in: 1...50, step: 1)
                     Text("\(Int(penWidth)) pt")
+                        .frame(width: 40, alignment: .trailing)
+                        .monospacedDigit()
+                }
+            }
+
+            Section("Vanishing Pen") {
+                HStack {
+                    Text("Fade Duration")
+                    Slider(value: $vanishingPenLifetime, in: 1.0...8.0, step: 0.5)
+                    Text(String(format: "%.1fs", vanishingPenLifetime))
                         .frame(width: 40, alignment: .trailing)
                         .monospacedDigit()
                 }
