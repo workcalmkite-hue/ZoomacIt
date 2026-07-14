@@ -251,6 +251,15 @@ final class DrawingCanvasView: NSView {
             context.draw(finished, in: bounds)
         }
 
+        // 2.5. Draw vanishingStrokes (Vanishing Pen mode — fading confirmed strokes)
+        if !vanishingStrokes.isEmpty {
+            let now = CACurrentMediaTime()
+            let lifetime = Settings.shared.vanishingPenLifetime
+            for stroke in vanishingStrokes {
+                drawVanishingStroke(stroke, now: now, lifetime: lifetime, in: context)
+            }
+        }
+
         // 3. Draw previewLayer (shape being dragged)
         if let preview = previewLayer {
             drawingState.currentNSColor.setStroke()
@@ -283,6 +292,11 @@ final class DrawingCanvasView: NSView {
             freehand.stroke()
             NSGraphicsContext.current?.cgContext.setBlendMode(.normal)
         }
+
+        // 5. Vanishing Pen mode indicator (HUD) — only while the mode is on
+        if drawingState.isVanishingPenEnabled {
+            drawVanishingPenIndicator(in: context)
+        }
     }
 
     private func drawBackground(in context: CGContext) {
@@ -310,6 +324,75 @@ final class DrawingCanvasView: NSView {
         context.setBlendMode(.clear)
         context.fill(normalized)
         context.restoreGState()
+    }
+
+    /// Renders a single Vanishing Pen stroke at its current fade alpha,
+    /// reusing the same path builders as the finished-layer compositing path.
+    private func drawVanishingStroke(
+        _ stroke: Stroke,
+        now: CFTimeInterval,
+        lifetime: TimeInterval,
+        in context: CGContext
+    ) {
+        let fadeAlpha = VanishingPenFader.alpha(createdAt: stroke.createdAt, now: now, lifetime: lifetime)
+        guard fadeAlpha > 0 else { return }
+
+        let path: NSBezierPath
+        switch stroke.shapeType {
+        case .freehand:
+            path = FreehandRenderer.smoothedPath(from: stroke.points)
+        case .line:
+            path = ShapeRenderer.linePath(from: stroke.startPoint, to: stroke.endPoint)
+        case .rectangle:
+            path = ShapeRenderer.rectanglePath(from: stroke.startPoint, to: stroke.endPoint)
+        case .ellipse:
+            path = ShapeRenderer.ellipsePath(from: stroke.startPoint, to: stroke.endPoint)
+        case .arrow:
+            path = ShapeRenderer.arrowPath(from: stroke.startPoint, to: stroke.endPoint, penWidth: stroke.lineWidth)
+        }
+
+        context.saveGState()
+        if stroke.isHighlighter {
+            HighlighterRenderer.applyHighlighterStyle(to: path, penWidth: stroke.lineWidth)
+            let blendMode: CGBlendMode = (backgroundImage != nil) ? .multiply : .normal
+            context.setBlendMode(blendMode)
+        } else {
+            path.lineWidth = stroke.lineWidth
+            path.lineCapStyle = .round
+            path.lineJoinStyle = .round
+        }
+        stroke.color.withAlphaComponent(stroke.color.alphaComponent * fadeAlpha).setStroke()
+        path.stroke()
+        context.restoreGState()
+    }
+
+    /// Small bottom-right badge shown while Vanishing Pen mode is armed, so
+    /// it's obvious at a glance during a live lecture that strokes will fade.
+    private func drawVanishingPenIndicator(in context: CGContext) {
+        let text = "Vanishing Pen"
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 13, weight: .semibold),
+            .foregroundColor: NSColor.white
+        ]
+        let attributedString = NSAttributedString(string: text, attributes: attrs)
+        let textSize = attributedString.size()
+
+        let padding: CGFloat = 8
+        let margin: CGFloat = 16
+        let badgeRect = CGRect(
+            x: bounds.maxX - textSize.width - padding * 2 - margin,
+            y: margin,
+            width: textSize.width + padding * 2,
+            height: textSize.height + padding
+        )
+
+        context.saveGState()
+        NSColor.black.withAlphaComponent(0.6).setFill()
+        NSBezierPath(roundedRect: badgeRect, xRadius: 6, yRadius: 6).fill()
+        context.restoreGState()
+
+        let textOrigin = CGPoint(x: badgeRect.minX + padding, y: badgeRect.minY + padding / 2)
+        attributedString.draw(at: textOrigin)
     }
 
     // MARK: - Mouse Events
