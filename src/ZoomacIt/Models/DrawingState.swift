@@ -86,6 +86,14 @@ final class DrawingState {
         spotlightDarkness = max(spotlightDarkness - Self.spotlightDarknessStep, Self.spotlightDarknessMin)
     }
 
+    // MARK: - Vanishing Pen
+
+    /// Whether strokes drawn from now on should fade out automatically
+    /// instead of persisting on `finishedLayer`. Resets to `false` every
+    /// time a new `DrawingState` is created (i.e. every time Draw mode is
+    /// entered) — not persisted, matching `activeTool`'s volatile pattern.
+    var isVanishingPenEnabled: Bool = false
+
     // MARK: - Derived
 
     /// The NSColor to use for drawing, applying highlighter alpha if needed.

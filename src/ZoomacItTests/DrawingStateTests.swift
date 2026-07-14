@@ -152,4 +152,19 @@ final class DrawingStateTests: XCTestCase {
         state.activeTool = .draw
         XCTAssertEqual(state.activeTool, .draw)
     }
+
+    // MARK: - Vanishing Pen
+
+    func testDefaultVanishingPenState() {
+        let state = DrawingState()
+        XCTAssertFalse(state.isVanishingPenEnabled)
+    }
+
+    func testVanishingPenToggle() {
+        let state = DrawingState()
+        state.isVanishingPenEnabled.toggle()
+        XCTAssertTrue(state.isVanishingPenEnabled)
+        state.isVanishingPenEnabled.toggle()
+        XCTAssertFalse(state.isVanishingPenEnabled)
+    }
 }
