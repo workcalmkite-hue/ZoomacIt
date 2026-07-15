@@ -25,9 +25,7 @@ targets:
         PRODUCT_NAME: ZoomacIt
         COMBINE_HIDPI_IMAGES: true
         LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
-        CODE_SIGN_STYLE: Manual
-        CODE_SIGN_IDENTITY: "Apple Development"
-        DEVELOPMENT_TEAM: T74PC5F324
+        CODE_SIGN_STYLE: Automatic
 
   ZoomacItTests:
     type: bundle.unit-test
@@ -41,6 +39,4 @@ targets:
         GENERATE_INFOPLIST_FILE: true
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/ZoomacIt.app/Contents/MacOS/ZoomacIt"
         BUNDLE_LOADER: "$(TEST_HOST)"
-        CODE_SIGN_STYLE: Manual
-        CODE_SIGN_IDENTITY: "Apple Development"
-        DEVELOPMENT_TEAM: T74PC5F324
+        CODE_SIGN_STYLE: Automatic
