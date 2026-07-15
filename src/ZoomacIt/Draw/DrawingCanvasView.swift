@@ -96,7 +96,7 @@ final class DrawingCanvasView: NSView {
     private func penCursor() -> NSCursor {
         let penWidth = drawingState.penWidth
         let color = drawingState.currentNSColor
-        let size = max(penWidth * 2, 8)
+        let size = min(max(penWidth * 0.375, 3), 9)
         let imageSize = NSSize(width: size + 4, height: size + 4)
 
         let image = NSImage(size: imageSize, flipped: false) { _ in
@@ -118,8 +118,8 @@ final class DrawingCanvasView: NSView {
     private func crosshairCursor() -> NSCursor {
         let penWidth = drawingState.penWidth
         let color = drawingState.currentNSColor
-        let armLength = min(max(penWidth * 1.5, 8), 40)
-        let thickness = min(max(penWidth, 1), 10)
+        let armLength = min(max(penWidth * 0.5, 3), 7)
+        let thickness = min(max(penWidth * 0.3, 0.5), 2.5)
         let size = armLength * 2 + thickness + 6
         let center = size / 2
 
