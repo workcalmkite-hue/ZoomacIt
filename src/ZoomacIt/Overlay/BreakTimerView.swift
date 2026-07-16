@@ -14,9 +14,16 @@ final class BreakTimerView: NSView {
 
     private let ringLineWidth: CGFloat = 6
 
+    private lazy var minusButton = makeControlButton(symbolName: "minus", action: #selector(minusTapped))
+    private lazy var closeButton = makeControlButton(symbolName: "xmark", action: #selector(closeTapped))
+    private lazy var plusButton = makeControlButton(symbolName: "plus", action: #selector(plusTapped))
+
+    private var trackingArea: NSTrackingArea?
+
     init(state: BreakTimerState) {
         self.state = state
         super.init(frame: NSRect(origin: .zero, size: BreakTimerWidgetMetrics.windowSize))
+        setUpControlButtons()
     }
 
     @available(*, unavailable)
@@ -92,5 +99,84 @@ final class BreakTimerView: NSView {
             y: circle.midY - size.height / 2
         )
         text.draw(at: origin, withAttributes: attrs)
+    }
+
+    // MARK: - Hover Controls
+
+    private func makeControlButton(symbolName: String, action: Selector) -> NSButton {
+        let button = NSButton(
+            image: NSImage(systemSymbolName: symbolName, accessibilityDescription: nil) ?? NSImage(),
+            target: self,
+            action: action
+        )
+        button.bezelStyle = .circular
+        button.isBordered = true
+        button.imageScaling = .scaleProportionallyDown
+        button.contentTintColor = .white
+        button.alphaValue = 0
+        return button
+    }
+
+    private func setUpControlButtons() {
+        let buttons = [minusButton, closeButton, plusButton]
+        let buttonSize: CGFloat = 22
+        let spacing: CGFloat = 6
+        let totalWidth = buttonSize * 3 + spacing * 2
+        var x = bounds.midX - totalWidth / 2
+        let y = (BreakTimerWidgetMetrics.controlBarHeight - buttonSize) / 2
+
+        for button in buttons {
+            button.frame = NSRect(x: x, y: y, width: buttonSize, height: buttonSize)
+            addSubview(button)
+            x += buttonSize + spacing
+        }
+    }
+
+    @objc private func minusTapped() {
+        state.adjustTime(byMinutes: -1)
+        needsDisplay = true
+    }
+
+    @objc private func plusTapped() {
+        state.adjustTime(byMinutes: 1)
+        needsDisplay = true
+    }
+
+    @objc private func closeTapped() {
+        onDismiss?()
+    }
+
+    // MARK: - Hover Tracking
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let trackingArea {
+            removeTrackingArea(trackingArea)
+        }
+        let area = NSTrackingArea(
+            rect: bounds,
+            options: [.mouseEnteredAndExited, .activeAlways],
+            owner: self,
+            userInfo: nil
+        )
+        addTrackingArea(area)
+        trackingArea = area
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        setControlButtons(hidden: false)
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        setControlButtons(hidden: true)
+    }
+
+    private func setControlButtons(hidden: Bool) {
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.15
+            for button in [minusButton, closeButton, plusButton] {
+                button.animator().alphaValue = hidden ? 0 : 1
+            }
+        }
     }
 }
