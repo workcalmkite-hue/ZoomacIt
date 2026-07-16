@@ -1,43 +1,5 @@
 import AppKit
 
-/// Position of the timer text on screen (3×3 grid).
-enum BreakTimerPosition: Int, Sendable, CaseIterable {
-    case topLeft, topCenter, topRight
-    case middleLeft, center, middleRight
-    case bottomLeft, bottomCenter, bottomRight
-
-    /// Returns the origin point for a text bounding box of the given size,
-    /// centered within the specified cell of a 3×3 grid over `screenFrame`.
-    func origin(forTextSize textSize: NSSize, in screenFrame: NSRect) -> NSPoint {
-        let margin: CGFloat = 40
-        let col = self.rawValue % 3
-        let row = 2 - (self.rawValue / 3) // flip: row 0 = top → NSView row 2
-
-        let x: CGFloat
-        switch col {
-        case 0:  x = margin
-        case 1:  x = (screenFrame.width - textSize.width) / 2
-        default: x = screenFrame.width - textSize.width - margin
-        }
-
-        let y: CGFloat
-        switch row {
-        case 0:  y = margin
-        case 1:  y = (screenFrame.height - textSize.height) / 2
-        default: y = screenFrame.height - textSize.height - margin
-        }
-
-        return NSPoint(x: x, y: y)
-    }
-}
-
-/// Background mode for the break timer screen.
-enum BreakTimerBackground: String, Sendable, CaseIterable {
-    case black
-    case fadedDesktop
-    // Phase 2: case customImage(URL)
-}
-
 /// Mutable state for the Break Timer feature.
 final class BreakTimerState {
 
@@ -60,14 +22,8 @@ final class BreakTimerState {
     /// Timer text color — reuses PenColor from Draw.
     var timerColor: PenColor = Settings.shared.breakTimerColor
 
-    /// Position on the 3×3 grid.
-    var position: BreakTimerPosition = .center
-
-    /// Timer text opacity (0.1 … 1.0).
+    /// Widget opacity (0.1 … 1.0).
     var opacity: CGFloat = Settings.shared.breakTimerOpacity
-
-    /// Background mode.
-    var background: BreakTimerBackground = Settings.shared.breakTimerBackground
 
     // MARK: - Options
 
@@ -87,7 +43,6 @@ final class BreakTimerState {
         defaultDuration = Settings.shared.breakTimerDefaultDuration
         timerColor = Settings.shared.breakTimerColor
         opacity = Settings.shared.breakTimerOpacity
-        background = Settings.shared.breakTimerBackground
         showElapsed = Settings.shared.breakTimerShowElapsed
         playSoundOnExpiration = Settings.shared.breakTimerPlaySound
         soundFileURL = Settings.shared.breakTimerSoundFile

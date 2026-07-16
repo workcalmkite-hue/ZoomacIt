@@ -1,30 +1,22 @@
 import AppKit
 
-/// NSView that renders the Break Timer countdown, handles keyboard events
-/// for time adjustment and color changes.
+/// Draws the Break Timer circular widget: a translucent circle, a progress ring for
+/// time remaining, and the countdown number centered inside it. Hover controls
+/// (added in a later task) live in the empty strip below the circle
+/// (`BreakTimerWidgetMetrics.controlBarHeight`).
 @MainActor
 final class BreakTimerView: NSView {
 
-    // MARK: - Properties
-
     let state: BreakTimerState
 
-    /// Optional captured desktop image for faded background.
-    var capturedImage: CGImage?
-
-    /// Called when the user presses Escape to dismiss the timer.
+    /// Called when the user dismisses the timer via the hover close button (added later).
     var onDismiss: (() -> Void)?
 
-    /// Whether the elapsed line has been revealed (for animation).
-    private var elapsedRevealed: Bool = false
+    private let ringLineWidth: CGFloat = 6
 
-    // MARK: - Init
-
-    init(frame: NSRect, state: BreakTimerState, capturedImage: CGImage? = nil) {
+    init(state: BreakTimerState) {
         self.state = state
-        self.capturedImage = capturedImage
-        super.init(frame: frame)
-        NSLog("[BreakTimerView] Initialized with frame %@", NSStringFromRect(frame))
+        super.init(frame: NSRect(origin: .zero, size: BreakTimerWidgetMetrics.windowSize))
     }
 
     @available(*, unavailable)
@@ -32,143 +24,73 @@ final class BreakTimerView: NSView {
         fatalError("init(coder:) is not supported")
     }
 
-    // MARK: - Key Handling
-
-    override var acceptsFirstResponder: Bool { true }
-
-    override func keyDown(with event: NSEvent) {
-        guard let chars = event.charactersIgnoringModifiers else { return }
-
-        switch event.keyCode {
-        case 0x7E: // Arrow Up
-            state.adjustTime(byMinutes: 1)
-            needsDisplay = true
-            NSLog("[BreakTimerView] Time adjusted +1 min → %@", state.formattedTime)
-
-        case 0x7D: // Arrow Down
-            state.adjustTime(byMinutes: -1)
-            needsDisplay = true
-            NSLog("[BreakTimerView] Time adjusted -1 min → %@", state.formattedTime)
-
-        case 0x35: // Escape
-            NSLog("[BreakTimerView] Escape pressed — dismissing timer")
-            onDismiss?()
-
-        default:
-            // Color keys
-            if let color = PenColor.from(character: chars) {
-                state.timerColor = color
-                needsDisplay = true
-                NSLog("[BreakTimerView] Timer color changed to %@", chars.uppercased())
-            }
-        }
+    /// The circle sits in the upper portion of the view; the strip below it
+    /// (`controlBarHeight` tall) is reserved for hover controls.
+    private var circleFrame: NSRect {
+        NSRect(
+            x: 0,
+            y: BreakTimerWidgetMetrics.controlBarHeight,
+            width: BreakTimerWidgetMetrics.diameter,
+            height: BreakTimerWidgetMetrics.diameter
+        )
     }
-
-    // MARK: - Drawing
 
     override func draw(_ dirtyRect: NSRect) {
-        guard let ctx = NSGraphicsContext.current?.cgContext else { return }
-        let bounds = self.bounds
-
-        // 1. Draw background
-        drawBackground(in: ctx, bounds: bounds)
-
-        // 2. Calculate font sizes
-        let mainFontSize = bounds.height / 5
-        let elapsedFontSize = mainFontSize * 0.4
-        let mainFont = NSFont.monospacedDigitSystemFont(ofSize: mainFontSize, weight: .bold)
-        let elapsedFont = NSFont.monospacedDigitSystemFont(ofSize: elapsedFontSize, weight: .medium)
-        let timerNSColor = state.timerColor.nsColor.withAlphaComponent(state.opacity)
-
-        // 3. Calculate main timer text size
-        let mainText = state.formattedTime
-        let mainAttrs: [NSAttributedString.Key: Any] = [
-            .font: mainFont,
-            .foregroundColor: timerNSColor
-        ]
-        let mainSize = (mainText as NSString).size(withAttributes: mainAttrs)
-
-        // 4. Calculate total bounding box (main + optional elapsed)
-        var totalHeight = mainSize.height
-        var elapsedSize = NSSize.zero
-        let elapsedSpacing: CGFloat = 8
-
-        if state.isExpired && state.showElapsed {
-            let elapsedText = state.formattedElapsed
-            let elapsedAttrs: [NSAttributedString.Key: Any] = [
-                .font: elapsedFont,
-                .foregroundColor: timerNSColor
-            ]
-            elapsedSize = (elapsedText as NSString).size(withAttributes: elapsedAttrs)
-            totalHeight += elapsedSpacing + elapsedSize.height
-        }
-
-        let totalSize = NSSize(
-            width: max(mainSize.width, elapsedSize.width),
-            height: totalHeight
-        )
-
-        // 5. Position based on grid
-        let origin = state.position.origin(forTextSize: totalSize, in: bounds)
-
-        // 6. Draw main timer text
-        let mainOrigin = NSPoint(
-            x: origin.x + (totalSize.width - mainSize.width) / 2,
-            y: origin.y + totalHeight - mainSize.height
-        )
-        (mainText as NSString).draw(at: mainOrigin, withAttributes: mainAttrs)
-
-        // 7. Draw elapsed text if expired
-        if state.isExpired && state.showElapsed {
-            let elapsedText = state.formattedElapsed
-            let elapsedAttrs: [NSAttributedString.Key: Any] = [
-                .font: elapsedFont,
-                .foregroundColor: timerNSColor
-            ]
-            let elapsedOrigin = NSPoint(
-                x: origin.x + (totalSize.width - elapsedSize.width) / 2,
-                y: origin.y
-            )
-
-            // Animate elapsed appearance
-            if !elapsedRevealed {
-                elapsedRevealed = true
-                // First frame: use reduced alpha for fade-in effect
-                let fadedAttrs: [NSAttributedString.Key: Any] = [
-                    .font: elapsedFont,
-                    .foregroundColor: timerNSColor.withAlphaComponent(0.3)
-                ]
-                (elapsedText as NSString).draw(at: elapsedOrigin, withAttributes: fadedAttrs)
-            } else {
-                (elapsedText as NSString).draw(at: elapsedOrigin, withAttributes: elapsedAttrs)
-            }
-        } else {
-            elapsedRevealed = false
-        }
+        let circle = circleFrame
+        drawFill(in: circle)
+        drawRing(in: circle)
+        drawTime(in: circle)
     }
 
-    // MARK: - Background
+    private func drawFill(in circle: NSRect) {
+        let inset = circle.insetBy(dx: circle.width * 0.08, dy: circle.height * 0.08)
+        NSColor.black.withAlphaComponent(0.55 * state.opacity).setFill()
+        NSBezierPath(ovalIn: inset).fill()
+    }
 
-    private func drawBackground(in ctx: CGContext, bounds: NSRect) {
-        switch state.background {
-        case .black:
-            ctx.setFillColor(NSColor.black.cgColor)
-            ctx.fill(bounds)
+    private func drawRing(in circle: NSRect) {
+        let ringRect = circle.insetBy(dx: ringLineWidth / 2, dy: ringLineWidth / 2)
+        let center = NSPoint(x: ringRect.midX, y: ringRect.midY)
+        let radius = ringRect.width / 2
 
-        case .fadedDesktop:
-            if let image = capturedImage {
-                // Draw the captured image darkened
-                ctx.saveGState()
-                ctx.draw(image, in: bounds)
-                // Overlay semi-transparent black to darken
-                ctx.setFillColor(NSColor.black.withAlphaComponent(Settings.shared.breakTimerBackgroundFadeDarkness).cgColor)
-                ctx.fill(bounds)
-                ctx.restoreGState()
-            } else {
-                // Fallback to black if no capture available
-                ctx.setFillColor(NSColor.black.cgColor)
-                ctx.fill(bounds)
-            }
-        }
+        NSColor.white.withAlphaComponent(0.14).setStroke()
+        let track = NSBezierPath(ovalIn: ringRect)
+        track.lineWidth = ringLineWidth
+        track.stroke()
+
+        let fraction = BreakTimerRingGeometry.remainingFraction(
+            remainingSeconds: state.remainingSeconds,
+            totalSeconds: state.defaultDuration
+        )
+        guard fraction > 0 else { return }
+
+        let progress = NSBezierPath()
+        progress.appendArc(
+            withCenter: center,
+            radius: radius,
+            startAngle: 90,
+            endAngle: 90 - fraction * 360,
+            clockwise: true
+        )
+        progress.lineWidth = ringLineWidth
+        progress.lineCapStyle = .round
+        state.timerColor.nsColor.withAlphaComponent(state.opacity).setStroke()
+        progress.stroke()
+    }
+
+    private func drawTime(in circle: NSRect) {
+        let fontSize = BreakTimerWidgetMetrics.diameter * 0.24
+        let font = NSFont.monospacedDigitSystemFont(ofSize: fontSize, weight: .semibold)
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: NSColor.white
+        ]
+        let text = state.formattedTime as NSString
+        let size = text.size(withAttributes: attrs)
+        let origin = NSPoint(
+            x: circle.midX - size.width / 2,
+            y: circle.midY - size.height / 2
+        )
+        text.draw(at: origin, withAttributes: attrs)
     }
 }

@@ -73,11 +73,9 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(Settings.shared.breakTimerDefaultDuration, 600)
         XCTAssertEqual(Settings.shared.breakTimerColor, .red)
         XCTAssertEqual(Settings.shared.breakTimerOpacity, 1.0)
-        XCTAssertEqual(Settings.shared.breakTimerBackground, .black)
         XCTAssertTrue(Settings.shared.breakTimerShowElapsed)
         XCTAssertFalse(Settings.shared.breakTimerPlaySound)
         XCTAssertNil(Settings.shared.breakTimerSoundFile)
-        XCTAssertEqual(Settings.shared.breakTimerBackgroundFadeDarkness, 0.6, accuracy: 0.001)
     }
 
     // MARK: - Round-trip
@@ -100,11 +98,6 @@ final class SettingsTests: XCTestCase {
     func testBreakTimerDurationRoundTrip() {
         Settings.shared.breakTimerDefaultDuration = 300
         XCTAssertEqual(Settings.shared.breakTimerDefaultDuration, 300)
-    }
-
-    func testBreakTimerBackgroundRoundTrip() {
-        Settings.shared.breakTimerBackground = .fadedDesktop
-        XCTAssertEqual(Settings.shared.breakTimerBackground, .fadedDesktop)
     }
 
     func testFontWeightRoundTrip() {
@@ -183,12 +176,6 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(PenColor.red.rawValue, "red")
         XCTAssertEqual(PenColor(rawValue: "blue"), .blue)
         XCTAssertNil(PenColor(rawValue: "invalid"))
-    }
-
-    func testBreakTimerBackgroundRawValue() {
-        XCTAssertEqual(BreakTimerBackground.black.rawValue, "black")
-        XCTAssertEqual(BreakTimerBackground.fadedDesktop.rawValue, "fadedDesktop")
-        XCTAssertEqual(BreakTimerBackground(rawValue: "fadedDesktop"), .fadedDesktop)
     }
 
     func testFontWeightOptionRawValue() {

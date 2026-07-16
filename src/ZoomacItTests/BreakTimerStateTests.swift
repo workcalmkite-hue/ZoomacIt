@@ -17,21 +17,6 @@ final class BreakTimerStateTests: XCTestCase {
         XCTAssertNil(state.soundFileURL)
     }
 
-    func testDefaultPosition() {
-        let state = BreakTimerState()
-        XCTAssertEqual(state.position, .center)
-    }
-
-    func testDefaultBackground() {
-        let state = BreakTimerState()
-        switch state.background {
-        case .black:
-            break // expected
-        default:
-            XCTFail("Default background should be .black")
-        }
-    }
-
     func testDefaultColor() {
         let state = BreakTimerState()
         XCTAssertEqual(state.timerColor.nsColor, PenColor.red.nsColor)
@@ -165,36 +150,6 @@ final class BreakTimerStateTests: XCTestCase {
         XCTAssertTrue(state.isExpired)
     }
 
-    // MARK: - Position
-
-    func testPositionAllCases() {
-        XCTAssertEqual(BreakTimerPosition.allCases.count, 9)
-    }
-
-    func testPositionCenterOrigin() {
-        let screenFrame = NSRect(x: 0, y: 0, width: 1920, height: 1080)
-        let textSize = NSSize(width: 200, height: 100)
-        let origin = BreakTimerPosition.center.origin(forTextSize: textSize, in: screenFrame)
-        XCTAssertEqual(origin.x, (1920 - 200) / 2)
-        XCTAssertEqual(origin.y, (1080 - 100) / 2)
-    }
-
-    func testPositionTopLeft() {
-        let screenFrame = NSRect(x: 0, y: 0, width: 1920, height: 1080)
-        let textSize = NSSize(width: 200, height: 100)
-        let origin = BreakTimerPosition.topLeft.origin(forTextSize: textSize, in: screenFrame)
-        XCTAssertEqual(origin.x, 40) // margin
-        XCTAssertEqual(origin.y, 1080 - 100 - 40) // top - textHeight - margin
-    }
-
-    func testPositionBottomRight() {
-        let screenFrame = NSRect(x: 0, y: 0, width: 1920, height: 1080)
-        let textSize = NSSize(width: 200, height: 100)
-        let origin = BreakTimerPosition.bottomRight.origin(forTextSize: textSize, in: screenFrame)
-        XCTAssertEqual(origin.x, 1920 - 200 - 40) // right - textWidth - margin
-        XCTAssertEqual(origin.y, 40) // margin
-    }
-
     // MARK: - Reload from Settings
 
     func testReloadFromSettings() {
@@ -204,7 +159,6 @@ final class BreakTimerStateTests: XCTestCase {
         Settings.shared.breakTimerDefaultDuration = 300
         Settings.shared.breakTimerColor = .blue
         Settings.shared.breakTimerOpacity = 0.5
-        Settings.shared.breakTimerBackground = .fadedDesktop
         Settings.shared.breakTimerShowElapsed = false
         Settings.shared.breakTimerPlaySound = true
 
@@ -216,7 +170,6 @@ final class BreakTimerStateTests: XCTestCase {
         XCTAssertEqual(state.defaultDuration, 300)
         XCTAssertEqual(state.timerColor, .blue)
         XCTAssertEqual(state.opacity, 0.5)
-        XCTAssertEqual(state.background, .fadedDesktop)
         XCTAssertFalse(state.showElapsed)
         XCTAssertTrue(state.playSoundOnExpiration)
 
@@ -224,27 +177,4 @@ final class BreakTimerStateTests: XCTestCase {
         Settings.shared.resetToDefaults()
     }
 
-    // MARK: - Position on Different Screen Sizes
-
-    func testPositionCenterOnUltrawide() {
-        let screenFrame = NSRect(x: 0, y: 0, width: 3440, height: 1440)
-        let textSize = NSSize(width: 200, height: 100)
-        let origin = BreakTimerPosition.center.origin(forTextSize: textSize, in: screenFrame)
-        XCTAssertEqual(origin.x, (3440 - 200) / 2)
-        XCTAssertEqual(origin.y, (1440 - 100) / 2)
-    }
-
-    func testPositionCenterOnSmallScreen() {
-        let screenFrame = NSRect(x: 0, y: 0, width: 800, height: 600)
-        let textSize = NSSize(width: 200, height: 100)
-        let origin = BreakTimerPosition.center.origin(forTextSize: textSize, in: screenFrame)
-        XCTAssertEqual(origin.x, (800 - 200) / 2)
-        XCTAssertEqual(origin.y, (600 - 100) / 2)
-    }
-
-    // MARK: - BreakTimerBackground
-
-    func testBreakTimerBackgroundAllCases() {
-        XCTAssertEqual(BreakTimerBackground.allCases.count, 2)
-    }
 }

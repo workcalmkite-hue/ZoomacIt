@@ -1,14 +1,16 @@
 import AppKit
 
-/// A borderless, full-screen window used to display the Break Timer.
-/// Uses `.screenSaver` level so it appears above the Draw overlay.
-/// Mouse events pass through to the underlying application.
-final class BreakTimerWindow: NSWindow {
+/// A small, non-activating floating panel that hosts the Break Timer circular widget.
+/// `level = .screenSaver` keeps it above the Draw overlay; `isMovableByWindowBackground`
+/// lets the user drag the widget anywhere without any custom mouse-tracking code —
+/// AppKit itself suppresses the drag when the mouse-down lands on a control (the
+/// hover buttons added in a later task).
+final class BreakTimerWindow: NSPanel {
 
-    convenience init(for screen: NSScreen) {
+    convenience init(at origin: CGPoint) {
         self.init(
-            contentRect: screen.frame,
-            styleMask: .borderless,
+            contentRect: NSRect(origin: origin, size: BreakTimerWidgetMetrics.windowSize),
+            styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
@@ -19,15 +21,7 @@ final class BreakTimerWindow: NSWindow {
         level = .screenSaver
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         isReleasedWhenClosed = false
-        acceptsMouseMovedEvents = false
-        ignoresMouseEvents = true
+        isMovableByWindowBackground = true
+        hidesOnDeactivate = false
     }
-
-    // MARK: - Overrides
-
-    /// Allow the window to become key so it can receive keyboard events.
-    override var canBecomeKey: Bool { true }
-
-    /// Allow the window to become main.
-    override var canBecomeMain: Bool { true }
 }

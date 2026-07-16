@@ -7,11 +7,9 @@ struct BreakTimerTab: View {
     @AppStorage(Settings.Keys.breakTimerDefaultDuration) private var duration: Int = 600
     @AppStorage(Settings.Keys.breakTimerColor) private var colorRaw: String = PenColor.red.rawValue
     @AppStorage(Settings.Keys.breakTimerOpacity) private var opacity: Double = 1.0
-    @AppStorage(Settings.Keys.breakTimerBackground) private var backgroundRaw: String = BreakTimerBackground.black.rawValue
     @AppStorage(Settings.Keys.breakTimerShowElapsed) private var showElapsed: Bool = true
     @AppStorage(Settings.Keys.breakTimerPlaySound) private var playSound: Bool = false
     @AppStorage(Settings.Keys.breakTimerSoundFile) private var soundFilePath: String = ""
-    @AppStorage(Settings.Keys.breakTimerBackgroundFadeDarkness) private var fadeDarkness: Double = 0.6
 
     /// Tracks whether a test sound is currently playing.
     @State private var isTestPlaying = false
@@ -22,13 +20,6 @@ struct BreakTimerTab: View {
         Binding(
             get: { PenColor(rawValue: colorRaw) ?? .red },
             set: { colorRaw = $0.rawValue }
-        )
-    }
-
-    private var background: Binding<BreakTimerBackground> {
-        Binding(
-            get: { BreakTimerBackground(rawValue: backgroundRaw) ?? .black },
-            set: { backgroundRaw = $0.rawValue }
         )
     }
 
@@ -67,20 +58,6 @@ struct BreakTimerTab: View {
                         .monospacedDigit()
                 }
 
-                Picker("Background", selection: background) {
-                    Text("Black").tag(BreakTimerBackground.black)
-                    Text("Faded Desktop").tag(BreakTimerBackground.fadedDesktop)
-                }
-
-                if BreakTimerBackground(rawValue: backgroundRaw) == .fadedDesktop {
-                    HStack {
-                        Text("Fade Darkness")
-                        Slider(value: $fadeDarkness, in: 0.1...1.0, step: 0.05)
-                        Text(String(format: "%.0f%%", fadeDarkness * 100))
-                            .frame(width: 40, alignment: .trailing)
-                            .monospacedDigit()
-                    }
-                }
             }
 
             Section("Options") {

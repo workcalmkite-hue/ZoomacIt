@@ -87,11 +87,9 @@ final class Settings: @unchecked Sendable {
         static let breakTimerDefaultDuration = "breakTimerDefaultDuration"
         static let breakTimerColor = "breakTimerColor"
         static let breakTimerOpacity = "breakTimerOpacity"
-        static let breakTimerBackground = "breakTimerBackground"
         static let breakTimerShowElapsed = "breakTimerShowElapsed"
         static let breakTimerPlaySound = "breakTimerPlaySound"
         static let breakTimerSoundFile = "breakTimerSoundFile"
-        static let breakTimerBackgroundFadeDarkness = "breakTimerBackgroundFadeDarkness"
         static let breakTimerWidgetPositionX = "breakTimerWidgetPositionX"
         static let breakTimerWidgetPositionY = "breakTimerWidgetPositionY"
     }
@@ -130,10 +128,8 @@ final class Settings: @unchecked Sendable {
             Keys.breakTimerDefaultDuration: 600,
             Keys.breakTimerColor: PenColor.red.rawValue,
             Keys.breakTimerOpacity: 1.0,
-            Keys.breakTimerBackground: BreakTimerBackground.black.rawValue,
             Keys.breakTimerShowElapsed: true,
-            Keys.breakTimerPlaySound: false,
-            Keys.breakTimerBackgroundFadeDarkness: 0.6
+            Keys.breakTimerPlaySound: false
         ])
     }
 
@@ -252,11 +248,6 @@ final class Settings: @unchecked Sendable {
         set { defaults.set(Double(newValue), forKey: Keys.breakTimerOpacity) }
     }
 
-    var breakTimerBackground: BreakTimerBackground {
-        get { BreakTimerBackground(rawValue: defaults.string(forKey: Keys.breakTimerBackground) ?? "") ?? .black }
-        set { defaults.set(newValue.rawValue, forKey: Keys.breakTimerBackground) }
-    }
-
     var breakTimerShowElapsed: Bool {
         get { defaults.bool(forKey: Keys.breakTimerShowElapsed) }
         set { defaults.set(newValue, forKey: Keys.breakTimerShowElapsed) }
@@ -273,11 +264,6 @@ final class Settings: @unchecked Sendable {
             return URL(fileURLWithPath: path)
         }
         set { defaults.set(newValue?.path ?? "", forKey: Keys.breakTimerSoundFile) }
-    }
-
-    var breakTimerBackgroundFadeDarkness: CGFloat {
-        get { CGFloat(defaults.double(forKey: Keys.breakTimerBackgroundFadeDarkness)) }
-        set { defaults.set(Double(newValue), forKey: Keys.breakTimerBackgroundFadeDarkness) }
     }
 
     /// Last dragged position of the circular widget, in screen coordinates.
@@ -315,9 +301,9 @@ final class Settings: @unchecked Sendable {
             Keys.defaultFontSize, Keys.fontWeight,
             Keys.defaultZoomLevel, Keys.zoomAnimationEnabled,
             Keys.breakTimerDefaultDuration, Keys.breakTimerColor,
-            Keys.breakTimerOpacity, Keys.breakTimerBackground,
+            Keys.breakTimerOpacity,
             Keys.breakTimerShowElapsed, Keys.breakTimerPlaySound,
-            Keys.breakTimerSoundFile, Keys.breakTimerBackgroundFadeDarkness,
+            Keys.breakTimerSoundFile,
             Keys.breakTimerWidgetPositionX, Keys.breakTimerWidgetPositionY
         ]
         for key in allKeys {

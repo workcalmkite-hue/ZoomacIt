@@ -1,6 +1,5 @@
 import AppKit
 import AudioToolbox
-import ScreenCaptureKit
 
 /// Manages the lifecycle of the Break Timer overlay window.
 @MainActor
@@ -40,27 +39,33 @@ final class BreakTimerWindowController {
         state.remainingSeconds = state.defaultDuration
         state.elapsedSinceExpiration = 0
 
-        if state.background == .fadedDesktop {
-            let screenNumber = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID ?? CGMainDisplayID()
-            let scaleFactor = screen.backingScaleFactor
-            let screenFrame = screen.frame
+        let savedPosition = Settings.shared.breakTimerWidgetPosition
+        let origin = BreakTimerWidgetMetrics.clamped(
+            origin: savedPosition ?? BreakTimerWidgetMetrics.defaultOrigin(in: screen.frame),
+            in: screen.frame
+        )
 
-            Task { @MainActor in
-                let captured = await Self.captureScreenImage(
-                    displayID: screenNumber,
-                    width: screenFrame.width,
-                    height: screenFrame.height,
-                    scaleFactor: scaleFactor
-                )
-                self.presentTimer(screen: screen, capturedImage: captured)
-            }
-        } else {
-            presentTimer(screen: screen, capturedImage: nil)
+        let window = BreakTimerWindow(at: origin)
+        let view = BreakTimerView(state: state)
+        view.onDismiss = { [weak self] in
+            self?.dismiss()
         }
+
+        window.contentView = view
+        window.orderFront(nil)
+
+        timerWindow = window
+        timerView = view
+
+        startCountdown()
     }
 
     func dismiss() {
         NSLog("[BreakTimerController] Dismissing break timer.")
+
+        if let window = timerWindow {
+            Settings.shared.breakTimerWidgetPosition = window.frame.origin
+        }
 
         countdownTimer?.invalidate()
         countdownTimer = nil
@@ -81,39 +86,16 @@ final class BreakTimerWindowController {
     }
 
     /// Bring the timer window back to the foreground (e.g. from menu bar click).
+    /// Does not activate the app — the widget floats without stealing focus.
     func bringToFront() {
-        timerWindow?.makeKeyAndOrderFront(nil)
-        NSApplication.shared.activate(ignoringOtherApps: true)
+        timerWindow?.orderFront(nil)
     }
 
     // MARK: - Private
 
-    private func presentTimer(screen: NSScreen, capturedImage: CGImage?) {
-        let window = BreakTimerWindow(for: screen)
-        let view = BreakTimerView(
-            frame: NSRect(origin: .zero, size: screen.frame.size),
-            state: state,
-            capturedImage: capturedImage
-        )
-        view.onDismiss = { [weak self] in
-            self?.dismiss()
-        }
-
-        window.contentView = view
-        window.makeKeyAndOrderFront(nil)
-        window.makeFirstResponder(view)
-
-        NSApplication.shared.activate(ignoringOtherApps: true)
-
-        timerWindow = window
-        timerView = view
-
-        startCountdown()
-    }
-
     private func startCountdown() {
         countdownTimer?.invalidate()
-        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
             guard let self else { return }
             let justExpired = self.state.tick()
 
@@ -124,6 +106,10 @@ final class BreakTimerWindowController {
 
             self.timerView?.needsDisplay = true
         }
+        // .common so the countdown keeps ticking while the user is dragging the widget
+        // (dragging runs the run loop in .eventTracking mode).
+        RunLoop.main.add(timer, forMode: .common)
+        countdownTimer = timer
         NSLog("[BreakTimerController] Countdown started.")
     }
 
@@ -171,49 +157,11 @@ final class BreakTimerWindowController {
 
     /// Play the default expiration alert sound.
     private static func playDefaultSound() {
-        // Try named system sounds first (more reliable than NSSound.beep / AudioServices)
         if let glass = NSSound(named: "Glass") {
             glass.play()
         } else {
             AudioServicesPlayAlertSound(kSystemSoundID_UserPreferredAlert)
         }
         NSLog("[BreakTimerController] Playing default alert sound.")
-    }
-
-    // MARK: - Screen Capture
-
-    private static func captureScreenImage(
-        displayID: CGDirectDisplayID,
-        width: CGFloat,
-        height: CGFloat,
-        scaleFactor: CGFloat
-    ) async -> CGImage? {
-        guard CGPreflightScreenCaptureAccess() else {
-            NSLog("[BreakTimerController] Screen Recording not permitted — using black background.")
-            return nil
-        }
-
-        do {
-            let availableContent = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-            guard let display = availableContent.displays.first(where: { $0.displayID == displayID }) else {
-                NSLog("[BreakTimerController] Display not found.")
-                return nil
-            }
-
-            let filter = SCContentFilter(display: display, excludingWindows: [])
-            let config = SCStreamConfiguration()
-            config.width = Int(width * scaleFactor)
-            config.height = Int(height * scaleFactor)
-            config.pixelFormat = kCVPixelFormatType_32BGRA
-            config.showsCursor = false
-
-            return try await SCScreenshotManager.captureImage(
-                contentFilter: filter,
-                configuration: config
-            )
-        } catch {
-            NSLog("[BreakTimerController] Screen capture failed: %@", error.localizedDescription)
-            return nil
-        }
     }
 }
