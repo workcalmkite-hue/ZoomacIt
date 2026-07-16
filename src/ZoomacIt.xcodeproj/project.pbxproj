@@ -37,7 +37,9 @@
 		9582B9FF70AFDB7FD8FC292D /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A978FA296EF6E99DE42DE5A5 /* SettingsWindowController.swift */; };
 		9DF3FA34ED77F2109586D4B5 /* StillZoomView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02D0969B89076B7BC986452B /* StillZoomView.swift */; };
 		A1B2C3D4E5F6A7B8C9D0E1F2 /* VanishingPenFader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C2D3E4F5A6B7C8D9E0F1A2 /* VanishingPenFader.swift */; };
+		B3C4D5E6F7A8B9C0D1E2F3A4 /* BreakTimerWidgetMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2B3C4D5E6F7A8B9C0D1E2F3 /* BreakTimerWidgetMetrics.swift */; };
 		B4CBD67B2A6AEEB3109F5792 /* CGContextExtensionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A10C3F6A8082DAF58EE6949 /* CGContextExtensionsTests.swift */; };
+		C5D6E7F8A9B0C1D2E3F4A5B6 /* BreakTimerWidgetMetricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C5D6E7F8A9B0C1D2E3F4A5 /* BreakTimerWidgetMetricsTests.swift */; };
 		BC7354984F865D5E2177B245 /* GeneralTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3EBA7640893729E53D436F6 /* GeneralTab.swift */; };
 		BDA90D7BFA5D8BEB00DCDB50 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 00930854C1D0CC9734D203CD /* Assets.xcassets */; };
 		BFE4A25ECEF31F988FA3CBC0 /* HotkeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2601F1F38544CFA522261C7D /* HotkeyManager.swift */; };
@@ -111,7 +113,9 @@
 		A978FA296EF6E99DE42DE5A5 /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
 		AD7667A522D320490BA4461A /* ZoomacItTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ZoomacItTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AFD499A142CC237EF664DD96 /* BreakTimerWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakTimerWindow.swift; sourceTree = "<group>"; };
+		A2B3C4D5E6F7A8B9C0D1E2F3 /* BreakTimerWidgetMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakTimerWidgetMetrics.swift; sourceTree = "<group>"; };
 		B1C2D3E4F5A6B7C8D9E0F1A2 /* VanishingPenFader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VanishingPenFader.swift; sourceTree = "<group>"; };
+		B4C5D6E7F8A9B0C1D2E3F4A5 /* BreakTimerWidgetMetricsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakTimerWidgetMetricsTests.swift; sourceTree = "<group>"; };
 		BD830BA2019F30C637E19AC9 /* ZoomacIt.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ZoomacIt.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BE3023CD2A9E7BBC51D21E79 /* BreakTimerWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakTimerWindowController.swift; sourceTree = "<group>"; };
 		C2B1A0F9E8D7C6B5A4F3E2D1 /* VanishingPenFaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VanishingPenFaderTests.swift; sourceTree = "<group>"; };
@@ -188,6 +192,7 @@
 		A9848C7C71E899E74E3268AF /* Overlay */ = {
 			isa = PBXGroup;
 			children = (
+				A2B3C4D5E6F7A8B9C0D1E2F3 /* BreakTimerWidgetMetrics.swift */,
 				1B27C880479A92E16A621C7B /* BreakTimerView.swift */,
 				AFD499A142CC237EF664DD96 /* BreakTimerWindow.swift */,
 				BE3023CD2A9E7BBC51D21E79 /* BreakTimerWindowController.swift */,
@@ -206,6 +211,7 @@
 			isa = PBXGroup;
 			children = (
 				C35CEE9FA480AD8EA3412F68 /* BreakTimerStateTests.swift */,
+				B4C5D6E7F8A9B0C1D2E3F4A5 /* BreakTimerWidgetMetricsTests.swift */,
 				0A10C3F6A8082DAF58EE6949 /* CGContextExtensionsTests.swift */,
 				68A34CBC6D716010D6E3DA63 /* DrawingStateTests.swift */,
 				3091F75DCC9B6EA27DC8FA61 /* FontWeightOptionTests.swift */,
@@ -362,6 +368,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C851D93A53C172EA7A4F10C6 /* BreakTimerStateTests.swift in Sources */,
+				C5D6E7F8A9B0C1D2E3F4A5B6 /* BreakTimerWidgetMetricsTests.swift in Sources */,
 				B4CBD67B2A6AEEB3109F5792 /* CGContextExtensionsTests.swift in Sources */,
 				17A6C1BCCBE9B8670704E4C2 /* DrawingStateTests.swift in Sources */,
 				2EA788919BF0547417E7E24E /* FontWeightOptionTests.swift in Sources */,
@@ -387,6 +394,7 @@
 				26292806CB72F8D077354D37 /* BreakTimerView.swift in Sources */,
 				1EAA0D96B867DF66AF0A6D2A /* BreakTimerWindow.swift in Sources */,
 				862780FF803ABA4C039BC6B7 /* BreakTimerWindowController.swift in Sources */,
+				B3C4D5E6F7A8B9C0D1E2F3A4 /* BreakTimerWidgetMetrics.swift in Sources */,
 				FFC7A2554BCDAF31EE2F2630 /* CGContext+Extensions.swift in Sources */,
 				D4EFADF937D92699DC1BB041 /* DrawTab.swift in Sources */,
 				DD29E7A2CA8719348BC7F361 /* DrawingCanvasView.swift in Sources */,
