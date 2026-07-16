@@ -10,8 +10,8 @@
 
 ## Global Constraints
 
-- Never edit `src/ZoomacIt.xcodeproj/project.pbxproj` or `src/project.yml` team ID / `PRODUCT_NAME` overrides, and never `git add` them — they hold this machine's personal signing identity. Only `git add` the specific source/test/doc files each task lists.
-- `xcodegen` is not installed on this machine — do not run `make generate`. No new target/group needs to be added to the Xcode project for this plan (all new files land inside the existing `ZoomacIt` and `ZoomacItTests` groups), so this shouldn't come up, but if a step ever seems to need `make generate`, stop and ask rather than editing `project.pbxproj` by hand.
+- Never add a team ID / `PRODUCT_NAME` override to `src/ZoomacIt.xcodeproj/project.pbxproj` or `src/project.yml`, and never commit personal signing identity values. (Amended 2026-07-16: the blanket "never edit pbxproj" rule is lifted — the working tree's pbxproj no longer carries personal signing data, and this classic-format project requires hand-registering every new `.swift` file in `project.pbxproj`, following the existing `VanishingPenFader.swift` entries as the pattern: PBXBuildFile + PBXFileReference + group children + Sources build phase, with fresh unique 24-hex-char UUIDs. Those registration edits are committed together with the new files. `src/project.yml` is also updated to stay in sync only if the file layout requires it — for plain file additions inside already-listed source directories it does not.)
+- `xcodegen` is not installed on this machine — do not run `make generate`; register new files by editing `project.pbxproj` directly as described above.
 - Run the full suite with `make test` after every task (each task's last step) and treat any *new* failure as a blocker — fix before moving on.
 - Korean strings in this plan mirror the design spec; all in-code identifiers, comments, and log messages stay in English/Swift-idiomatic style, matching the existing codebase (the existing files under `Overlay/`, `Models/`, `Settings/` are all English-identifier Swift with no Korean in source).
 
