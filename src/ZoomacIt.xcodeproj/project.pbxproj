@@ -50,8 +50,10 @@
 		CB7DAA6D3BA711D13B9C0D94 /* FreehandRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 068AF06DCD4187879DA06178 /* FreehandRenderer.swift */; };
 		D1E2F3A4B5C6D7E8F9A0B1C2 /* VanishingPenFaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2B1A0F9E8D7C6B5A4F3E2D1 /* VanishingPenFaderTests.swift */; };
 		D4EFADF937D92699DC1BB041 /* DrawTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10D373A688250139487280BB /* DrawTab.swift */; };
+		D6E7F8A9B0C1D2E3F4A5B6C7 /* BreakTimerRingGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F6A7B8C9D0E1F2A3B4 /* BreakTimerRingGeometry.swift */; };
 		DD29E7A2CA8719348BC7F361 /* DrawingCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E069EC8EF00483692203882 /* DrawingCanvasView.swift */; };
 		E5D3BADF6F8A9BB8A808F28D /* BreakTimerTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15F0FBF26F55526DA1BEF95E /* BreakTimerTab.swift */; };
+		E7F8A9B0C1D2E3F4A5B6C7D8 /* BreakTimerRingGeometryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E6F7A8B9C0D1E2F3A4B5C6 /* BreakTimerRingGeometryTests.swift */; };
 		E9920C14A86002F653920D7E /* OverlayWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 167B3BE9B273B7B056C41CD5 /* OverlayWindow.swift */; };
 		EFB76DD8BEEDF74D7AB326DD /* OverlayWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9059A7F84AC48FE489FC4064 /* OverlayWindowController.swift */; };
 		F5CC9D2C9692AEFD40DA3C32 /* TextInputController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 972CA1E50E6818D068D22333 /* TextInputController.swift */; };
@@ -119,9 +121,11 @@
 		BD830BA2019F30C637E19AC9 /* ZoomacIt.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ZoomacIt.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BE3023CD2A9E7BBC51D21E79 /* BreakTimerWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakTimerWindowController.swift; sourceTree = "<group>"; };
 		C2B1A0F9E8D7C6B5A4F3E2D1 /* VanishingPenFaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VanishingPenFaderTests.swift; sourceTree = "<group>"; };
+		C3D4E5F6A7B8C9D0E1F2A3B4 /* BreakTimerRingGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakTimerRingGeometry.swift; sourceTree = "<group>"; };
 		C35CEE9FA480AD8EA3412F68 /* BreakTimerStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakTimerStateTests.swift; sourceTree = "<group>"; };
 		C4861D0131871D035CC07327 /* KeyRecorderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyRecorderView.swift; sourceTree = "<group>"; };
 		CF0B1156D71050ABD1623796 /* CGContext+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CGContext+Extensions.swift"; sourceTree = "<group>"; };
+		D5E6F7A8B9C0D1E2F3A4B5C6 /* BreakTimerRingGeometryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakTimerRingGeometryTests.swift; sourceTree = "<group>"; };
 		E670EBEBFE36CE4EF3BFEDDD /* NSScreen+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSScreen+Extensions.swift"; sourceTree = "<group>"; };
 		F716B76F77ECE1104368663A /* DrawingState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrawingState.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -192,6 +196,7 @@
 		A9848C7C71E899E74E3268AF /* Overlay */ = {
 			isa = PBXGroup;
 			children = (
+				C3D4E5F6A7B8C9D0E1F2A3B4 /* BreakTimerRingGeometry.swift */,
 				A2B3C4D5E6F7A8B9C0D1E2F3 /* BreakTimerWidgetMetrics.swift */,
 				1B27C880479A92E16A621C7B /* BreakTimerView.swift */,
 				AFD499A142CC237EF664DD96 /* BreakTimerWindow.swift */,
@@ -210,6 +215,7 @@
 		ABD35C925B1B25CF1D934FAE /* ZoomacItTests */ = {
 			isa = PBXGroup;
 			children = (
+				D5E6F7A8B9C0D1E2F3A4B5C6 /* BreakTimerRingGeometryTests.swift */,
 				C35CEE9FA480AD8EA3412F68 /* BreakTimerStateTests.swift */,
 				B4C5D6E7F8A9B0C1D2E3F4A5 /* BreakTimerWidgetMetricsTests.swift */,
 				0A10C3F6A8082DAF58EE6949 /* CGContextExtensionsTests.swift */,
@@ -367,6 +373,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E7F8A9B0C1D2E3F4A5B6C7D8 /* BreakTimerRingGeometryTests.swift in Sources */,
 				C851D93A53C172EA7A4F10C6 /* BreakTimerStateTests.swift in Sources */,
 				C5D6E7F8A9B0C1D2E3F4A5B6 /* BreakTimerWidgetMetricsTests.swift in Sources */,
 				B4CBD67B2A6AEEB3109F5792 /* CGContextExtensionsTests.swift in Sources */,
@@ -389,6 +396,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				398052FC99D2C2CD71B1DFC5 /* AppDelegate.swift in Sources */,
+				D6E7F8A9B0C1D2E3F4A5B6C7 /* BreakTimerRingGeometry.swift in Sources */,
 				C3267D6C7B3527E75BC44373 /* BreakTimerState.swift in Sources */,
 				E5D3BADF6F8A9BB8A808F28D /* BreakTimerTab.swift in Sources */,
 				26292806CB72F8D077354D37 /* BreakTimerView.swift in Sources */,
