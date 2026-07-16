@@ -92,6 +92,8 @@ final class Settings: @unchecked Sendable {
         static let breakTimerPlaySound = "breakTimerPlaySound"
         static let breakTimerSoundFile = "breakTimerSoundFile"
         static let breakTimerBackgroundFadeDarkness = "breakTimerBackgroundFadeDarkness"
+        static let breakTimerWidgetPositionX = "breakTimerWidgetPositionX"
+        static let breakTimerWidgetPositionY = "breakTimerWidgetPositionY"
     }
 
     // MARK: - Register Defaults
@@ -278,6 +280,27 @@ final class Settings: @unchecked Sendable {
         set { defaults.set(Double(newValue), forKey: Keys.breakTimerBackgroundFadeDarkness) }
     }
 
+    /// Last dragged position of the circular widget, in screen coordinates.
+    /// `nil` when the user hasn't moved it yet (caller should default to screen center).
+    var breakTimerWidgetPosition: CGPoint? {
+        get {
+            guard let x = defaults.object(forKey: Keys.breakTimerWidgetPositionX) as? Double,
+                  let y = defaults.object(forKey: Keys.breakTimerWidgetPositionY) as? Double else {
+                return nil
+            }
+            return CGPoint(x: x, y: y)
+        }
+        set {
+            guard let point = newValue else {
+                defaults.removeObject(forKey: Keys.breakTimerWidgetPositionX)
+                defaults.removeObject(forKey: Keys.breakTimerWidgetPositionY)
+                return
+            }
+            defaults.set(Double(point.x), forKey: Keys.breakTimerWidgetPositionX)
+            defaults.set(Double(point.y), forKey: Keys.breakTimerWidgetPositionY)
+        }
+    }
+
     // MARK: - Reset
 
     func resetToDefaults() {
@@ -294,7 +317,8 @@ final class Settings: @unchecked Sendable {
             Keys.breakTimerDefaultDuration, Keys.breakTimerColor,
             Keys.breakTimerOpacity, Keys.breakTimerBackground,
             Keys.breakTimerShowElapsed, Keys.breakTimerPlaySound,
-            Keys.breakTimerSoundFile, Keys.breakTimerBackgroundFadeDarkness
+            Keys.breakTimerSoundFile, Keys.breakTimerBackgroundFadeDarkness,
+            Keys.breakTimerWidgetPositionX, Keys.breakTimerWidgetPositionY
         ]
         for key in allKeys {
             defaults.removeObject(forKey: key)

@@ -122,6 +122,22 @@ final class SettingsTests: XCTestCase {
         XCTAssertNil(Settings.shared.breakTimerSoundFile)
     }
 
+    func testBreakTimerWidgetPositionDefaultsToNil() {
+        XCTAssertNil(Settings.shared.breakTimerWidgetPosition)
+    }
+
+    func testBreakTimerWidgetPositionRoundTrip() {
+        Settings.shared.breakTimerWidgetPosition = CGPoint(x: 120.5, y: 340)
+        XCTAssertEqual(Settings.shared.breakTimerWidgetPosition?.x, 120.5)
+        XCTAssertEqual(Settings.shared.breakTimerWidgetPosition?.y, 340)
+    }
+
+    func testBreakTimerWidgetPositionClearedBySettingNil() {
+        Settings.shared.breakTimerWidgetPosition = CGPoint(x: 10, y: 10)
+        Settings.shared.breakTimerWidgetPosition = nil
+        XCTAssertNil(Settings.shared.breakTimerWidgetPosition)
+    }
+
     // MARK: - Reset
 
     func testResetToDefaults() {
