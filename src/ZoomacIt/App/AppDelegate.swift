@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var zoomController: StillZoomWindowController?
     private var liveZoomController: LiveZoomWindowController?
     private var breakTimerController: BreakTimerWindowController?
+    private let stickyNoteManager = StickyNoteManager()
     /// Stores the full-resolution source image when transitioning from Zoom → Draw,
     /// so that Escape from Draw can return to Zoom mode.
     private var zoomSourceForDrawReturn: CGImage?
@@ -206,6 +207,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Called from BreakTimerWindowController when the timer is dismissed.
     func breakTimerDidEnd() {
         breakTimerController = nil
+    }
+
+    // MARK: - Sticky Notes
+
+    /// Spawn a movable always-on-top sticky note (Draw mode, M key).
+    func spawnStickyNote() {
+        stickyNoteManager.spawnNote()
     }
 
     // MARK: - Preferences

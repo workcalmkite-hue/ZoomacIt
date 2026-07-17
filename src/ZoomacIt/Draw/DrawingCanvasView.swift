@@ -17,6 +17,9 @@ final class DrawingCanvasView: NSView {
     /// Called when the user exits draw mode (Escape / right-click).
     var onDismiss: (() -> Void)?
 
+    /// Called when the user presses M to spawn a movable sticky note.
+    var onStickyNoteRequest: (() -> Void)?
+
     // MARK: - State
 
     let drawingState = DrawingState()
@@ -603,6 +606,10 @@ final class DrawingCanvasView: NSView {
         // Text mode
         case "T":
             enterTextMode()
+
+        // Sticky note (memo) — floats above everything and moves with its text
+        case "M":
+            onStickyNoteRequest?()
 
         // Toggle Vanishing Pen mode
         case "V":

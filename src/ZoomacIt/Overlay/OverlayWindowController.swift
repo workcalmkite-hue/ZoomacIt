@@ -41,6 +41,9 @@ final class OverlayWindowController {
         canvas.onDismiss = { [weak self] in
             self?.dismiss()
         }
+        canvas.onStickyNoteRequest = {
+            (NSApplication.shared.delegate as? AppDelegate)?.spawnStickyNote()
+        }
 
         window.contentView = canvas
         window.makeKeyAndOrderFront(nil)
