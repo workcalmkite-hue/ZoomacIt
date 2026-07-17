@@ -47,6 +47,7 @@
 		C3267D6C7B3527E75BC44373 /* BreakTimerState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CD11F607239F9F22444F64A /* BreakTimerState.swift */; };
 		C4AB6F7D6D54525206A767EE /* StillZoomWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01CA4E00EAC24379AB71E2EC /* StillZoomWindowController.swift */; };
 		C851D93A53C172EA7A4F10C6 /* BreakTimerStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C35CEE9FA480AD8EA3412F68 /* BreakTimerStateTests.swift */; };
+		A7B8C9D0E1F2A3B4C5D6E7F8 /* StickyNoteMetricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6A7B8C9D0E1F2A3B4C5D6E7 /* StickyNoteMetricsTests.swift */; };
 		C93442BB6C4635032200E48B /* ShapeRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 478A14C839BA1275E186312E /* ShapeRenderer.swift */; };
 		CB7DAA6D3BA711D13B9C0D94 /* FreehandRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 068AF06DCD4187879DA06178 /* FreehandRenderer.swift */; };
 		D1E2F3A4B5C6D7E8F9A0B1C2 /* VanishingPenFaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2B1A0F9E8D7C6B5A4F3E2D1 /* VanishingPenFaderTests.swift */; };
@@ -125,6 +126,7 @@
 		C2B1A0F9E8D7C6B5A4F3E2D1 /* VanishingPenFaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VanishingPenFaderTests.swift; sourceTree = "<group>"; };
 		C3D4E5F6A7B8C9D0E1F2A3B4 /* BreakTimerRingGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakTimerRingGeometry.swift; sourceTree = "<group>"; };
 		C35CEE9FA480AD8EA3412F68 /* BreakTimerStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakTimerStateTests.swift; sourceTree = "<group>"; };
+		F6A7B8C9D0E1F2A3B4C5D6E7 /* StickyNoteMetricsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickyNoteMetricsTests.swift; sourceTree = "<group>"; };
 		C4861D0131871D035CC07327 /* KeyRecorderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyRecorderView.swift; sourceTree = "<group>"; };
 		CF0B1156D71050ABD1623796 /* CGContext+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CGContext+Extensions.swift"; sourceTree = "<group>"; };
 		D5E6F7A8B9C0D1E2F3A4B5C6 /* BreakTimerRingGeometryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakTimerRingGeometryTests.swift; sourceTree = "<group>"; };
@@ -220,6 +222,7 @@
 			children = (
 				D5E6F7A8B9C0D1E2F3A4B5C6 /* BreakTimerRingGeometryTests.swift */,
 				C35CEE9FA480AD8EA3412F68 /* BreakTimerStateTests.swift */,
+				F6A7B8C9D0E1F2A3B4C5D6E7 /* StickyNoteMetricsTests.swift */,
 				B4C5D6E7F8A9B0C1D2E3F4A5 /* BreakTimerWidgetMetricsTests.swift */,
 				0A10C3F6A8082DAF58EE6949 /* CGContextExtensionsTests.swift */,
 				68A34CBC6D716010D6E3DA63 /* DrawingStateTests.swift */,
@@ -378,6 +381,7 @@
 			files = (
 				E7F8A9B0C1D2E3F4A5B6C7D8 /* BreakTimerRingGeometryTests.swift in Sources */,
 				C851D93A53C172EA7A4F10C6 /* BreakTimerStateTests.swift in Sources */,
+				A7B8C9D0E1F2A3B4C5D6E7F8 /* StickyNoteMetricsTests.swift in Sources */,
 				C5D6E7F8A9B0C1D2E3F4A5B6 /* BreakTimerWidgetMetricsTests.swift in Sources */,
 				B4CBD67B2A6AEEB3109F5792 /* CGContextExtensionsTests.swift in Sources */,
 				17A6C1BCCBE9B8670704E4C2 /* DrawingStateTests.swift in Sources */,

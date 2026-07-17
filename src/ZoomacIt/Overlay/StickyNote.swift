@@ -1,5 +1,42 @@
 import AppKit
 
+/// Pure geometry/clamping for sticky notes — kept AppKit-free so it's unit-testable.
+enum StickyNoteMetrics {
+
+    static let defaultSize = CGSize(width: 240, height: 180)
+    static let minSize = CGSize(width: 140, height: 100)
+    static let maxSize = CGSize(width: 800, height: 620)
+
+    static let defaultFontSize: CGFloat = 15
+    static let minFontSize: CGFloat = 10
+    static let maxFontSize: CGFloat = 60
+    static let fontSizeStep: CGFloat = 2
+
+    static func clampedSize(_ size: CGSize) -> CGSize {
+        CGSize(
+            width: min(max(size.width, minSize.width), maxSize.width),
+            height: min(max(size.height, minSize.height), maxSize.height)
+        )
+    }
+
+    static func clampedFontSize(_ size: CGFloat) -> CGFloat {
+        min(max(size, minFontSize), maxFontSize)
+    }
+
+    /// Window frame after dragging the bottom-right grip by (dx, dy) in screen
+    /// coordinates from the initial frame. The top-left corner stays fixed, so
+    /// the note grows toward the drag direction (right/down).
+    static func frameForGripDrag(initial: CGRect, dx: CGFloat, dy: CGFloat) -> CGRect {
+        let size = clampedSize(CGSize(width: initial.width + dx, height: initial.height - dy))
+        return CGRect(
+            x: initial.minX,
+            y: initial.maxY - size.height,
+            width: size.width,
+            height: size.height
+        )
+    }
+}
+
 /// Spawns and tracks sticky notes (Draw mode, press M). Each note is an
 /// independent always-on-top panel: the text lives inside the window, so
 /// dragging the note moves the text with it, and the note survives leaving
@@ -12,10 +49,14 @@ final class StickyNoteManager {
     /// Cascade counter so consecutive notes don't stack exactly on top of each other.
     private var spawnCount = 0
 
+    /// New notes reuse the size/font the user last chose (this app run).
+    private var preferredSize = StickyNoteMetrics.defaultSize
+    private var preferredFontSize = StickyNoteMetrics.defaultFontSize
+
     func spawnNote() {
         guard let screen = NSScreen.screenContainingMouse ?? NSScreen.main else { return }
 
-        let size = StickyNotePanel.defaultSize
+        let size = preferredSize
         let cascade = CGFloat(spawnCount % 8) * 28
         spawnCount += 1
         let origin = CGPoint(
@@ -23,10 +64,16 @@ final class StickyNoteManager {
             y: screen.frame.midY - size.height / 2 - cascade
         )
 
-        let panel = StickyNotePanel(at: origin)
+        let panel = StickyNotePanel(at: origin, size: size, fontSize: preferredFontSize)
         panel.onClose = { [weak self, weak panel] in
             guard let self, let panel else { return }
             self.close(panel)
+        }
+        panel.onSizeChanged = { [weak self] newSize in
+            self?.preferredSize = newSize
+        }
+        panel.onFontSizeChanged = { [weak self] newFontSize in
+            self?.preferredFontSize = newFontSize
         }
         panel.makeKeyAndOrderFront(nil)
         notes.append(panel)
@@ -44,16 +91,16 @@ final class StickyNoteManager {
 /// `level = .screenSaver` keeps it above the Draw overlay and every app window.
 final class StickyNotePanel: NSPanel {
 
-    static let defaultSize = CGSize(width: 240, height: 180)
-
     var onClose: (() -> Void)?
+    var onSizeChanged: ((CGSize) -> Void)?
+    var onFontSizeChanged: ((CGFloat) -> Void)?
 
     /// Borderless panels refuse key status by default; the note needs it for typing.
     override var canBecomeKey: Bool { true }
 
-    init(at origin: CGPoint) {
+    init(at origin: CGPoint, size: CGSize, fontSize: CGFloat) {
         super.init(
-            contentRect: NSRect(origin: origin, size: Self.defaultSize),
+            contentRect: NSRect(origin: origin, size: size),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -68,12 +115,37 @@ final class StickyNotePanel: NSPanel {
         isMovableByWindowBackground = true
         hidesOnDeactivate = false
 
-        let view = StickyNoteView(frame: NSRect(origin: .zero, size: Self.defaultSize))
+        let view = StickyNoteView(frame: NSRect(origin: .zero, size: size), fontSize: fontSize)
         view.onClose = { [weak self] in
             self?.onClose?()
         }
+        view.onFontSizeChanged = { [weak self] newFontSize in
+            self?.onFontSizeChanged?(newFontSize)
+        }
         contentView = view
         makeFirstResponder(view.textView)
+    }
+
+    /// ⌘+ / ⌘− / ⌘0 adjust the note's text size while the note is key.
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        guard event.modifierFlags.contains(.command),
+              let noteView = contentView as? StickyNoteView,
+              let characters = event.charactersIgnoringModifiers else {
+            return super.performKeyEquivalent(with: event)
+        }
+        switch characters {
+        case "+", "=":
+            noteView.adjustFontSize(by: StickyNoteMetrics.fontSizeStep)
+            return true
+        case "-":
+            noteView.adjustFontSize(by: -StickyNoteMetrics.fontSizeStep)
+            return true
+        case "0":
+            noteView.setFontSize(StickyNoteMetrics.defaultFontSize)
+            return true
+        default:
+            return super.performKeyEquivalent(with: event)
+        }
     }
 }
 
@@ -84,6 +156,7 @@ final class StickyNotePanel: NSPanel {
 final class StickyNoteView: NSView {
 
     var onClose: (() -> Void)?
+    var onFontSizeChanged: ((CGFloat) -> Void)?
 
     private static let dragBarHeight: CGFloat = 24
     private static let cornerRadius: CGFloat = 10
@@ -92,6 +165,8 @@ final class StickyNoteView: NSView {
     private static let barColor = NSColor(calibratedRed: 0.98, green: 0.87, blue: 0.44, alpha: 0.98)
 
     let textView: NSTextView
+
+    private(set) var fontSize: CGFloat
 
     private lazy var closeButton: NSButton = {
         let button = NSButton(
@@ -106,7 +181,9 @@ final class StickyNoteView: NSView {
         return button
     }()
 
-    override init(frame frameRect: NSRect) {
+    init(frame frameRect: NSRect, fontSize: CGFloat) {
+        self.fontSize = StickyNoteMetrics.clampedFontSize(fontSize)
+
         let textFrame = NSRect(
             x: 0,
             y: 0,
@@ -117,7 +194,7 @@ final class StickyNoteView: NSView {
         text.drawsBackground = false
         text.isRichText = false
         text.allowsUndo = true
-        text.font = .systemFont(ofSize: 15)
+        text.font = .systemFont(ofSize: self.fontSize)
         text.textColor = NSColor.black.withAlphaComponent(0.85)
         text.insertionPointColor = NSColor.black.withAlphaComponent(0.85)
         text.textContainerInset = NSSize(width: 8, height: 8)
@@ -143,6 +220,16 @@ final class StickyNoteView: NSView {
         )
         closeButton.autoresizingMask = [.minXMargin, .minYMargin]
         addSubview(closeButton)
+
+        let gripSize: CGFloat = 16
+        let grip = StickyNoteResizeGrip(frame: NSRect(
+            x: frameRect.width - gripSize,
+            y: 0,
+            width: gripSize,
+            height: gripSize
+        ))
+        grip.autoresizingMask = [.minXMargin, .maxYMargin]
+        addSubview(grip)
     }
 
     @available(*, unavailable)
@@ -168,7 +255,68 @@ final class StickyNoteView: NSView {
         NSGraphicsContext.restoreGraphicsState()
     }
 
+    // MARK: - Font Size
+
+    func adjustFontSize(by delta: CGFloat) {
+        setFontSize(fontSize + delta)
+    }
+
+    func setFontSize(_ newSize: CGFloat) {
+        let clamped = StickyNoteMetrics.clampedFontSize(newSize)
+        guard clamped != fontSize else { return }
+        fontSize = clamped
+        // Setting `font` restyles the whole note — a memo has one text size.
+        textView.font = .systemFont(ofSize: clamped)
+        onFontSizeChanged?(clamped)
+    }
+
     @objc private func closeTapped() {
         onClose?()
+    }
+}
+
+/// Bottom-right corner grip that resizes the note by dragging. A separate view so
+/// `mouseDownCanMoveWindow == false` exempts just this corner from the window-drag
+/// behavior the rest of the note keeps.
+@MainActor
+private final class StickyNoteResizeGrip: NSView {
+
+    override var mouseDownCanMoveWindow: Bool { false }
+
+    private var initialFrame: CGRect = .zero
+    private var initialMouse: NSPoint = .zero
+
+    override func draw(_ dirtyRect: NSRect) {
+        NSColor.black.withAlphaComponent(0.35).setStroke()
+        // Three short diagonal hatch lines pointing into the corner.
+        for offset: CGFloat in [4, 8, 12] {
+            let path = NSBezierPath()
+            path.move(to: NSPoint(x: bounds.maxX - offset, y: bounds.minY + 3))
+            path.line(to: NSPoint(x: bounds.maxX - 3, y: bounds.minY + offset))
+            path.lineWidth = 1.5
+            path.stroke()
+        }
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        guard let window else { return }
+        initialFrame = window.frame
+        initialMouse = NSEvent.mouseLocation
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let window else { return }
+        let mouse = NSEvent.mouseLocation
+        let frame = StickyNoteMetrics.frameForGripDrag(
+            initial: initialFrame,
+            dx: mouse.x - initialMouse.x,
+            dy: mouse.y - initialMouse.y
+        )
+        window.setFrame(frame, display: true)
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        guard let panel = window as? StickyNotePanel else { return }
+        panel.onSizeChanged?(panel.frame.size)
     }
 }
