@@ -12,7 +12,16 @@ final class BreakTimerView: NSView {
     /// Called when the user dismisses the timer via the hover close button.
     var onDismiss: (() -> Void)?
 
-    private let ringLineWidth: CGFloat = 6
+    /// Called when the user scrolls over the widget to resize it.
+    /// Parameters are the raw `scrollingDeltaY` and `hasPreciseScrollingDeltas`.
+    var onResizeRequest: ((_ scrollDeltaY: CGFloat, _ isPrecise: Bool) -> Void)?
+
+    /// Current widget diameter; drawing and control layout scale with it.
+    private(set) var diameter: CGFloat
+
+    private var widgetScale: CGFloat { BreakTimerWidgetMetrics.scale(forDiameter: diameter) }
+
+    private var ringLineWidth: CGFloat { 6 * widgetScale }
 
     private lazy var minusButton = makeControlButton(
         symbolName: "minus",
@@ -35,11 +44,12 @@ final class BreakTimerView: NSView {
 
     private var trackingArea: NSTrackingArea?
 
-    init(state: BreakTimerState) {
+    init(state: BreakTimerState, diameter: CGFloat) {
         self.state = state
+        self.diameter = diameter
         super.init(frame: NSRect(
             origin: .zero,
-            size: BreakTimerWidgetMetrics.windowSize(forDiameter: BreakTimerWidgetMetrics.baseDiameter)
+            size: BreakTimerWidgetMetrics.windowSize(forDiameter: diameter)
         ))
         setUpControlButtons()
     }
@@ -54,9 +64,9 @@ final class BreakTimerView: NSView {
     private var circleFrame: NSRect {
         NSRect(
             x: 0,
-            y: BreakTimerWidgetMetrics.controlBarHeight(forDiameter: BreakTimerWidgetMetrics.baseDiameter),
-            width: BreakTimerWidgetMetrics.baseDiameter,
-            height: BreakTimerWidgetMetrics.baseDiameter
+            y: BreakTimerWidgetMetrics.controlBarHeight(forDiameter: diameter),
+            width: diameter,
+            height: diameter
         )
     }
 
@@ -115,7 +125,7 @@ final class BreakTimerView: NSView {
     }
 
     private func drawTime(in circle: NSRect) {
-        let fontSize = BreakTimerWidgetMetrics.baseDiameter * 0.24
+        let fontSize = diameter * 0.24
         let font = NSFont.monospacedDigitSystemFont(ofSize: fontSize, weight: .semibold)
         let attrs: [NSAttributedString.Key: Any] = [
             .font: font,
@@ -153,15 +163,21 @@ final class BreakTimerView: NSView {
     }
 
     private func setUpControlButtons() {
-        let buttonSize: CGFloat = 22
-        let spacing: CGFloat = 6
+        for button in controlButtons {
+            addSubview(button)
+        }
+        layoutControlButtons()
+    }
+
+    private func layoutControlButtons() {
+        let buttonSize: CGFloat = 22 * widgetScale
+        let spacing: CGFloat = 6 * widgetScale
         let totalWidth = buttonSize * 3 + spacing * 2
         var x = bounds.midX - totalWidth / 2
-        let y = (BreakTimerWidgetMetrics.controlBarHeight(forDiameter: BreakTimerWidgetMetrics.baseDiameter) - buttonSize) / 2
+        let y = (BreakTimerWidgetMetrics.controlBarHeight(forDiameter: diameter) - buttonSize) / 2
 
         for button in controlButtons {
             button.frame = NSRect(x: x, y: y, width: buttonSize, height: buttonSize)
-            addSubview(button)
             x += buttonSize + spacing
         }
     }
@@ -178,6 +194,20 @@ final class BreakTimerView: NSView {
 
     @objc private func closeTapped() {
         onDismiss?()
+    }
+
+    // MARK: - Resize
+
+    /// Adopt a new diameter after the controller has resized the window. The window's
+    /// `setFrame` already resized this view; this re-derives the scaled layout.
+    func apply(diameter: CGFloat) {
+        self.diameter = diameter
+        layoutControlButtons()
+        needsDisplay = true
+    }
+
+    override func scrollWheel(with event: NSEvent) {
+        onResizeRequest?(event.scrollingDeltaY, event.hasPreciseScrollingDeltas)
     }
 
     // MARK: - Hover Tracking

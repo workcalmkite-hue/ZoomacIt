@@ -7,11 +7,11 @@ import AppKit
 /// hover buttons added in a later task).
 final class BreakTimerWindow: NSPanel {
 
-    convenience init(at origin: CGPoint) {
+    convenience init(at origin: CGPoint, diameter: CGFloat) {
         self.init(
             contentRect: NSRect(
                 origin: origin,
-                size: BreakTimerWidgetMetrics.windowSize(forDiameter: BreakTimerWidgetMetrics.baseDiameter)
+                size: BreakTimerWidgetMetrics.windowSize(forDiameter: diameter)
             ),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,

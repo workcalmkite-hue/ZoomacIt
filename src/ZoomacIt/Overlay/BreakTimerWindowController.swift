@@ -40,27 +40,29 @@ final class BreakTimerWindowController {
         state.remainingSeconds = state.defaultDuration
         state.elapsedSinceExpiration = 0
 
+        let diameter = Settings.shared.breakTimerWidgetDiameter
         let savedPosition = Settings.shared.breakTimerWidgetPosition
         let origin: CGPoint
         if let saved = savedPosition {
             let widgetRect = CGRect(
                 origin: saved,
-                size: BreakTimerWidgetMetrics.windowSize(forDiameter: BreakTimerWidgetMetrics.baseDiameter)
+                size: BreakTimerWidgetMetrics.windowSize(forDiameter: diameter)
             )
             // Keep the widget on whichever connected screen the user left it on;
             // fall back to the main screen only if that display is gone.
             let host = NSScreen.screens.first { $0.frame.intersects(widgetRect) } ?? screen
-            origin = BreakTimerWidgetMetrics.clamped(
-                origin: saved, in: host.frame, forDiameter: BreakTimerWidgetMetrics.baseDiameter)
+            origin = BreakTimerWidgetMetrics.clamped(origin: saved, in: host.frame, forDiameter: diameter)
         } else {
-            origin = BreakTimerWidgetMetrics.defaultOrigin(
-                in: screen.frame, forDiameter: BreakTimerWidgetMetrics.baseDiameter)
+            origin = BreakTimerWidgetMetrics.defaultOrigin(in: screen.frame, forDiameter: diameter)
         }
 
-        let window = BreakTimerWindow(at: origin)
-        let view = BreakTimerView(state: state)
+        let window = BreakTimerWindow(at: origin, diameter: diameter)
+        let view = BreakTimerView(state: state, diameter: diameter)
         view.onDismiss = { [weak self] in
             self?.dismiss()
+        }
+        view.onResizeRequest = { [weak self] deltaY, isPrecise in
+            self?.resizeWidget(scrollDeltaY: deltaY, isPrecise: isPrecise)
         }
 
         window.contentView = view
@@ -106,6 +108,31 @@ final class BreakTimerWindowController {
     }
 
     // MARK: - Private
+
+    /// One scroll tick over the widget: grow/shrink around the widget's center,
+    /// keep it on its current screen, and persist the chosen size immediately
+    /// (position, by contrast, is saved on dismiss).
+    private func resizeWidget(scrollDeltaY: CGFloat, isPrecise: Bool) {
+        guard let window = timerWindow, let view = timerView else { return }
+
+        let current = view.diameter
+        let target = BreakTimerWidgetMetrics.diameter(
+            afterScrollDeltaY: scrollDeltaY, isPrecise: isPrecise, from: current)
+        guard target != current else { return }
+
+        var origin = BreakTimerWidgetMetrics.resizedOrigin(
+            currentOrigin: window.frame.origin, fromDiameter: current, toDiameter: target)
+        if let screen = window.screen ?? NSScreen.main {
+            origin = BreakTimerWidgetMetrics.clamped(origin: origin, in: screen.frame, forDiameter: target)
+        }
+
+        window.setFrame(
+            NSRect(origin: origin, size: BreakTimerWidgetMetrics.windowSize(forDiameter: target)),
+            display: true
+        )
+        view.apply(diameter: target)
+        Settings.shared.breakTimerWidgetDiameter = target
+    }
 
     private func startCountdown() {
         countdownTimer?.invalidate()
