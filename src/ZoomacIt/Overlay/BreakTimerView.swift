@@ -114,7 +114,7 @@ final class BreakTimerView: NSView {
 
         let fraction = BreakTimerRingGeometry.remainingFraction(
             remainingSeconds: state.remainingSeconds,
-            totalSeconds: state.defaultDuration
+            totalSeconds: state.sessionTotalSeconds
         )
         guard fraction > 0 else { return }
 

@@ -40,6 +40,8 @@ final class BreakTimerWindowController {
         state.remainingSeconds = state.defaultDuration
         state.elapsedSinceExpiration = 0
         state.isPaused = true
+        state.hasStarted = false
+        state.sessionTotalSeconds = state.defaultDuration
 
         let diameter = Settings.shared.breakTimerWidgetDiameter
         let savedPosition = Settings.shared.breakTimerWidgetPosition
@@ -83,6 +85,7 @@ final class BreakTimerWindowController {
     func togglePause() {
         if state.isPaused {
             state.isPaused = false
+            state.hasStarted = true
             NSLog("[BreakTimerController] Resumed.")
             startCountdown()
         } else {

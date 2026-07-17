@@ -57,6 +57,32 @@ final class BreakTimerStateTests: XCTestCase {
         XCTAssertEqual(state.remainingSeconds, 0, "Cannot go below 0")
     }
 
+    func testAdjustBeforeStartKeepsRingFull() {
+        let state = BreakTimerState()
+        state.adjustTime(byMinutes: -4)
+        XCTAssertEqual(state.remainingSeconds, 360)
+        XCTAssertEqual(
+            state.sessionTotalSeconds, 360,
+            "Adjusting before play changes the session duration itself, so the ring stays full"
+        )
+    }
+
+    func testAdjustAfterStartKeepsSessionTotal() {
+        let state = BreakTimerState()
+        state.hasStarted = true
+        state.adjustTime(byMinutes: -4)
+        XCTAssertEqual(state.remainingSeconds, 360)
+        XCTAssertEqual(state.sessionTotalSeconds, 600, "Mid-run adjustments must not rescale the ring")
+    }
+
+    func testAdjustAboveSessionTotalRaisesTotal() {
+        let state = BreakTimerState()
+        state.hasStarted = true
+        state.adjustTime(byMinutes: 2)
+        XCTAssertEqual(state.remainingSeconds, 720)
+        XCTAssertEqual(state.sessionTotalSeconds, 720, "Remaining must never exceed the ring's total")
+    }
+
     func testAdjustTimeResetsElapsed() {
         let state = BreakTimerState()
         state.remainingSeconds = 0

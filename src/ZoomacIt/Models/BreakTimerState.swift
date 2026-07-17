@@ -21,6 +21,14 @@ final class BreakTimerState {
     /// press play to begin, and can pause/resume at any time.
     var isPaused: Bool = true
 
+    /// Whether play has been pressed at least once this session.
+    var hasStarted: Bool = false
+
+    /// Total seconds the progress ring measures against: the duration the user
+    /// actually chose for this session (10:00 default, adjusted with +/− before
+    /// pressing play), not the settings default.
+    var sessionTotalSeconds: Int = Settings.shared.breakTimerDefaultDuration
+
     // MARK: - Appearance
 
     /// Timer text color — reuses PenColor from Draw.
@@ -60,6 +68,13 @@ final class BreakTimerState {
         // If time was added after expiration, reset elapsed counter
         if remainingSeconds > 0 {
             elapsedSinceExpiration = 0
+        }
+        if !hasStarted {
+            // Before the first play the user is still choosing the duration,
+            // so the ring stays a full circle.
+            sessionTotalSeconds = remainingSeconds
+        } else if remainingSeconds > sessionTotalSeconds {
+            sessionTotalSeconds = remainingSeconds
         }
     }
 
