@@ -1,4 +1,5 @@
 import AppKit
+import QuartzCore
 
 /// Draws the Break Timer circular widget: a translucent circle, a progress ring for
 /// time remaining, and the countdown number centered inside it. Hover controls
@@ -65,6 +66,16 @@ final class BreakTimerView: NSView {
         track.lineWidth = ringLineWidth
         track.stroke()
 
+        if state.isExpired {
+            let alpha = BreakTimerRingGeometry.expiredPulseAlpha(elapsedTime: CACurrentMediaTime())
+            let full = NSBezierPath(ovalIn: ringRect)
+            full.lineWidth = ringLineWidth
+            full.lineCapStyle = .round
+            NSColor.systemRed.withAlphaComponent(alpha).setStroke()
+            full.stroke()
+            return
+        }
+
         let fraction = BreakTimerRingGeometry.remainingFraction(
             remainingSeconds: state.remainingSeconds,
             totalSeconds: state.defaultDuration
@@ -92,7 +103,13 @@ final class BreakTimerView: NSView {
             .font: font,
             .foregroundColor: NSColor.white
         ]
-        let text = state.formattedTime as NSString
+        let displayText: String
+        if state.isExpired {
+            displayText = state.showElapsed ? state.formattedElapsed : "0:00"
+        } else {
+            displayText = state.formattedTime
+        }
+        let text = displayText as NSString
         let size = text.size(withAttributes: attrs)
         let origin = NSPoint(
             x: circle.midX - size.width / 2,

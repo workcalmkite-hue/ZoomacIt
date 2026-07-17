@@ -8,6 +8,7 @@ final class BreakTimerWindowController {
     private var timerWindow: BreakTimerWindow?
     private var timerView: BreakTimerView?
     private var countdownTimer: Timer?
+    private var pulseTimer: Timer?
     private var state: BreakTimerState
     private var playingSound: NSSound?  // retain while playing
 
@@ -69,6 +70,8 @@ final class BreakTimerWindowController {
 
         countdownTimer?.invalidate()
         countdownTimer = nil
+        pulseTimer?.invalidate()
+        pulseTimer = nil
 
         // Stop any expiration sound still playing
         playingSound?.stop()
@@ -102,6 +105,7 @@ final class BreakTimerWindowController {
             if justExpired {
                 NSLog("[BreakTimerController] Timer expired!")
                 self.playExpirationSound()
+                self.startPulsing()
             }
 
             self.timerView?.needsDisplay = true
@@ -111,6 +115,27 @@ final class BreakTimerWindowController {
         RunLoop.main.add(timer, forMode: .common)
         countdownTimer = timer
         NSLog("[BreakTimerController] Countdown started.")
+    }
+
+    /// Redraws at ~20fps so the expired-state ring pulse animates smoothly. Self-stops
+    /// once `state` is no longer expired (e.g. the user clicked +1 min), and gets
+    /// restarted by `startCountdown()` the next time the timer expires.
+    private func startPulsing() {
+        pulseTimer?.invalidate()
+        let timer = Timer(timeInterval: 1.0 / 20.0, repeats: true) { [weak self] timer in
+            guard let self else {
+                timer.invalidate()
+                return
+            }
+            guard self.state.isExpired else {
+                timer.invalidate()
+                self.pulseTimer = nil
+                return
+            }
+            self.timerView?.needsDisplay = true
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        pulseTimer = timer
     }
 
     private func playExpirationSound() {
