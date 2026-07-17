@@ -44,6 +44,28 @@ enum StickyNoteMetrics {
     }
 }
 
+/// A ⌘-shortcut inside a sticky note, resolved from the *hardware* key code so
+/// the shortcuts work in every input source — with a Korean layout ⌘A arrives
+/// as "⌘ㅁ", so matching on characters breaks, but the physical key is the same.
+enum StickyNoteKeyCommand: Equatable {
+    case fontBigger, fontSmaller, fontReset
+    case selectAll, copy, paste, cut, undo, redo
+
+    static func from(keyCode: UInt16, shift: Bool) -> StickyNoteKeyCommand? {
+        switch keyCode {
+        case 24, 69: return .fontBigger   // = (+) / keypad +
+        case 27, 78: return .fontSmaller  // -     / keypad -
+        case 29, 82: return .fontReset    // 0     / keypad 0
+        case 0: return .selectAll         // A (ㅁ)
+        case 8: return .copy              // C (ㅊ)
+        case 9: return .paste             // V (ㅍ)
+        case 7: return .cut               // X (ㅌ)
+        case 6: return shift ? .redo : .undo // Z (ㅋ)
+        default: return nil
+        }
+    }
+}
+
 /// Spawns and tracks sticky notes (Draw mode, press M). Each note is an
 /// independent always-on-top panel: the text lives inside the window, so
 /// dragging the note moves the text with it, and the note survives leaving
@@ -308,40 +330,35 @@ final class StickyNoteTextView: NSTextView {
 
     /// Font-size keys plus the standard edit shortcuts. The app has no Edit menu
     /// (it's a menu bar app), so ⌘A/⌘C/⌘V/⌘X/⌘Z would otherwise do nothing here.
+    /// Matched by key code via `StickyNoteKeyCommand` so Korean input works too.
     private func handleCommandKey(_ event: NSEvent) -> Bool {
         guard event.modifierFlags.contains(.command),
-              let characters = event.charactersIgnoringModifiers else { return false }
-        switch characters {
-        case "+", "=":
+              let command = StickyNoteKeyCommand.from(
+                keyCode: event.keyCode,
+                shift: event.modifierFlags.contains(.shift)
+              ) else { return false }
+
+        switch command {
+        case .fontBigger:
             onFontSizeCommand?(StickyNoteMetrics.fontSizeStep)
-            return true
-        case "-":
+        case .fontSmaller:
             onFontSizeCommand?(-StickyNoteMetrics.fontSizeStep)
-            return true
-        case "0":
+        case .fontReset:
             onFontSizeCommand?(nil)
-            return true
-        case "a", "A":
+        case .selectAll:
             selectAll(nil)
-            return true
-        case "c", "C":
+        case .copy:
             copy(nil)
-            return true
-        case "v", "V":
+        case .paste:
             paste(nil)
-            return true
-        case "x", "X":
+        case .cut:
             cut(nil)
-            return true
-        case "z":
+        case .undo:
             undoManager?.undo()
-            return true
-        case "Z": // ⇧⌘Z
+        case .redo:
             undoManager?.redo()
-            return true
-        default:
-            return false
         }
+        return true
     }
 }
 

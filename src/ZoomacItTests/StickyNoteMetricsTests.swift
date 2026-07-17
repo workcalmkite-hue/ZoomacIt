@@ -31,6 +31,25 @@ final class StickyNoteMetricsTests: XCTestCase {
         XCTAssertEqual(StickyNoteMetrics.clampedFontSize(500), StickyNoteMetrics.maxFontSize)
     }
 
+    // MARK: - Key Commands (by hardware key code, input-source independent)
+
+    func testKeyCommandMapping() {
+        XCTAssertEqual(StickyNoteKeyCommand.from(keyCode: 0, shift: false), .selectAll)
+        XCTAssertEqual(StickyNoteKeyCommand.from(keyCode: 8, shift: false), .copy)
+        XCTAssertEqual(StickyNoteKeyCommand.from(keyCode: 9, shift: false), .paste)
+        XCTAssertEqual(StickyNoteKeyCommand.from(keyCode: 7, shift: false), .cut)
+        XCTAssertEqual(StickyNoteKeyCommand.from(keyCode: 6, shift: false), .undo)
+        XCTAssertEqual(StickyNoteKeyCommand.from(keyCode: 6, shift: true), .redo)
+        XCTAssertEqual(StickyNoteKeyCommand.from(keyCode: 24, shift: false), .fontBigger)
+        XCTAssertEqual(StickyNoteKeyCommand.from(keyCode: 27, shift: false), .fontSmaller)
+        XCTAssertEqual(StickyNoteKeyCommand.from(keyCode: 29, shift: false), .fontReset)
+    }
+
+    func testKeyCommandIgnoresOtherKeys() {
+        XCTAssertNil(StickyNoteKeyCommand.from(keyCode: 12, shift: false), "Q must not match")
+        XCTAssertNil(StickyNoteKeyCommand.from(keyCode: 49, shift: false), "Space must not match")
+    }
+
     // MARK: - Font Scroll
 
     func testFontScrollUpGrowsText() {
