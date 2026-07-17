@@ -92,6 +92,7 @@ final class Settings: @unchecked Sendable {
         static let breakTimerSoundFile = "breakTimerSoundFile"
         static let breakTimerWidgetPositionX = "breakTimerWidgetPositionX"
         static let breakTimerWidgetPositionY = "breakTimerWidgetPositionY"
+        static let breakTimerWidgetDiameter = "breakTimerWidgetDiameter"
     }
 
     // MARK: - Register Defaults
@@ -287,6 +288,23 @@ final class Settings: @unchecked Sendable {
         }
     }
 
+    /// User-chosen widget diameter (scroll-to-resize). Clamped on both read and write
+    /// so a stale or hand-edited defaults value can't produce a broken widget.
+    var breakTimerWidgetDiameter: CGFloat {
+        get {
+            guard let stored = defaults.object(forKey: Keys.breakTimerWidgetDiameter) as? Double else {
+                return BreakTimerWidgetMetrics.baseDiameter
+            }
+            return BreakTimerWidgetMetrics.clampedDiameter(CGFloat(stored))
+        }
+        set {
+            defaults.set(
+                Double(BreakTimerWidgetMetrics.clampedDiameter(newValue)),
+                forKey: Keys.breakTimerWidgetDiameter
+            )
+        }
+    }
+
     // MARK: - Reset
 
     func resetToDefaults() {
@@ -304,7 +322,8 @@ final class Settings: @unchecked Sendable {
             Keys.breakTimerOpacity,
             Keys.breakTimerShowElapsed, Keys.breakTimerPlaySound,
             Keys.breakTimerSoundFile,
-            Keys.breakTimerWidgetPositionX, Keys.breakTimerWidgetPositionY
+            Keys.breakTimerWidgetPositionX, Keys.breakTimerWidgetPositionY,
+            Keys.breakTimerWidgetDiameter
         ]
         for key in allKeys {
             defaults.removeObject(forKey: key)

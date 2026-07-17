@@ -131,6 +131,36 @@ final class SettingsTests: XCTestCase {
         XCTAssertNil(Settings.shared.breakTimerWidgetPosition)
     }
 
+    func testBreakTimerWidgetDiameterDefaultsToBaseDiameter() {
+        XCTAssertEqual(Settings.shared.breakTimerWidgetDiameter, BreakTimerWidgetMetrics.baseDiameter)
+    }
+
+    func testBreakTimerWidgetDiameterRoundTrip() {
+        Settings.shared.breakTimerWidgetDiameter = 180
+        XCTAssertEqual(Settings.shared.breakTimerWidgetDiameter, 180)
+    }
+
+    func testBreakTimerWidgetDiameterClampsStoredOutOfRangeValuesOnRead() {
+        // Simulate a stale/hand-edited defaults value.
+        UserDefaults.standard.set(1000.0, forKey: "breakTimerWidgetDiameter")
+        XCTAssertEqual(Settings.shared.breakTimerWidgetDiameter, BreakTimerWidgetMetrics.maxDiameter)
+        UserDefaults.standard.set(10.0, forKey: "breakTimerWidgetDiameter")
+        XCTAssertEqual(Settings.shared.breakTimerWidgetDiameter, BreakTimerWidgetMetrics.minDiameter)
+    }
+
+    func testBreakTimerWidgetDiameterClampsOnWrite() {
+        Settings.shared.breakTimerWidgetDiameter = 9999
+        XCTAssertEqual(
+            UserDefaults.standard.double(forKey: "breakTimerWidgetDiameter"),
+            Double(BreakTimerWidgetMetrics.maxDiameter))
+    }
+
+    func testResetClearsBreakTimerWidgetDiameter() {
+        Settings.shared.breakTimerWidgetDiameter = 200
+        Settings.shared.resetToDefaults()
+        XCTAssertEqual(Settings.shared.breakTimerWidgetDiameter, BreakTimerWidgetMetrics.baseDiameter)
+    }
+
     // MARK: - Reset
 
     func testResetToDefaults() {
