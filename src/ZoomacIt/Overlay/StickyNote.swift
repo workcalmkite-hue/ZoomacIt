@@ -295,18 +295,20 @@ final class StickyNoteTextView: NSTextView {
     }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        if handleFontSizeKey(event) { return true }
+        if handleCommandKey(event) { return true }
         return super.performKeyEquivalent(with: event)
     }
 
     override func keyDown(with event: NSEvent) {
         // Fallback: in a non-activating panel the key-equivalent phase can be
         // skipped, in which case ⌘ keys arrive here as plain keyDowns.
-        if handleFontSizeKey(event) { return }
+        if handleCommandKey(event) { return }
         super.keyDown(with: event)
     }
 
-    private func handleFontSizeKey(_ event: NSEvent) -> Bool {
+    /// Font-size keys plus the standard edit shortcuts. The app has no Edit menu
+    /// (it's a menu bar app), so ⌘A/⌘C/⌘V/⌘X/⌘Z would otherwise do nothing here.
+    private func handleCommandKey(_ event: NSEvent) -> Bool {
         guard event.modifierFlags.contains(.command),
               let characters = event.charactersIgnoringModifiers else { return false }
         switch characters {
@@ -318,6 +320,24 @@ final class StickyNoteTextView: NSTextView {
             return true
         case "0":
             onFontSizeCommand?(nil)
+            return true
+        case "a", "A":
+            selectAll(nil)
+            return true
+        case "c", "C":
+            copy(nil)
+            return true
+        case "v", "V":
+            paste(nil)
+            return true
+        case "x", "X":
+            cut(nil)
+            return true
+        case "z":
+            undoManager?.undo()
+            return true
+        case "Z": // ⇧⌘Z
+            undoManager?.redo()
             return true
         default:
             return false
