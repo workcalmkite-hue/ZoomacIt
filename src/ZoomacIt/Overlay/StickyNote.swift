@@ -23,6 +23,13 @@ enum StickyNoteMetrics {
         min(max(size, minFontSize), maxFontSize)
     }
 
+    /// Font size after a ⌘-scroll gesture over the note. Same precise/line-delta
+    /// split as the break timer widget's resize, tuned for point sizes.
+    static func fontSize(afterScrollDeltaY deltaY: CGFloat, isPrecise: Bool, from current: CGFloat) -> CGFloat {
+        let pointsPerUnit: CGFloat = isPrecise ? 0.1 : 1.5
+        return clampedFontSize(current + deltaY * pointsPerUnit)
+    }
+
     /// Window frame after dragging the bottom-right grip by (dx, dy) in screen
     /// coordinates from the initial frame. The top-left corner stays fixed, so
     /// the note grows toward the drag direction (right/down).
@@ -125,28 +132,6 @@ final class StickyNotePanel: NSPanel {
         contentView = view
         makeFirstResponder(view.textView)
     }
-
-    /// ⌘+ / ⌘− / ⌘0 adjust the note's text size while the note is key.
-    override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        guard event.modifierFlags.contains(.command),
-              let noteView = contentView as? StickyNoteView,
-              let characters = event.charactersIgnoringModifiers else {
-            return super.performKeyEquivalent(with: event)
-        }
-        switch characters {
-        case "+", "=":
-            noteView.adjustFontSize(by: StickyNoteMetrics.fontSizeStep)
-            return true
-        case "-":
-            noteView.adjustFontSize(by: -StickyNoteMetrics.fontSizeStep)
-            return true
-        case "0":
-            noteView.setFontSize(StickyNoteMetrics.defaultFontSize)
-            return true
-        default:
-            return super.performKeyEquivalent(with: event)
-        }
-    }
 }
 
 /// Draws the sticky-note body (yellow rounded rect with a darker drag bar on top)
@@ -190,7 +175,7 @@ final class StickyNoteView: NSView {
             width: frameRect.width,
             height: frameRect.height - Self.dragBarHeight
         )
-        let text = NSTextView(frame: textFrame)
+        let text = StickyNoteTextView(frame: textFrame)
         text.drawsBackground = false
         text.isRichText = false
         text.allowsUndo = true
@@ -230,6 +215,20 @@ final class StickyNoteView: NSView {
         ))
         grip.autoresizingMask = [.minXMargin, .maxYMargin]
         addSubview(grip)
+
+        text.onFontScroll = { [weak self] deltaY, isPrecise in
+            guard let self else { return }
+            self.setFontSize(StickyNoteMetrics.fontSize(
+                afterScrollDeltaY: deltaY, isPrecise: isPrecise, from: self.fontSize))
+        }
+        text.onFontSizeCommand = { [weak self] delta in
+            guard let self else { return }
+            if let delta {
+                self.adjustFontSize(by: delta)
+            } else {
+                self.setFontSize(StickyNoteMetrics.defaultFontSize)
+            }
+        }
     }
 
     @available(*, unavailable)
@@ -272,6 +271,57 @@ final class StickyNoteView: NSView {
 
     @objc private func closeTapped() {
         onClose?()
+    }
+}
+
+/// The note's editor. Handles the text-size gestures itself (it's the first
+/// responder, so this is the one place events reliably arrive in a borderless
+/// non-activating panel): ⌘-scroll zooms the text, ⌘+/⌘−/⌘0 step/reset it.
+@MainActor
+final class StickyNoteTextView: NSTextView {
+
+    /// (scrollingDeltaY, hasPreciseScrollingDeltas) from a ⌘-scroll over the text.
+    var onFontScroll: ((CGFloat, Bool) -> Void)?
+
+    /// Font-size step from ⌘+/⌘− (nil = ⌘0, reset to default).
+    var onFontSizeCommand: ((CGFloat?) -> Void)?
+
+    override func scrollWheel(with event: NSEvent) {
+        if event.modifierFlags.contains(.command) {
+            onFontScroll?(event.scrollingDeltaY, event.hasPreciseScrollingDeltas)
+            return
+        }
+        super.scrollWheel(with: event)
+    }
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if handleFontSizeKey(event) { return true }
+        return super.performKeyEquivalent(with: event)
+    }
+
+    override func keyDown(with event: NSEvent) {
+        // Fallback: in a non-activating panel the key-equivalent phase can be
+        // skipped, in which case ⌘ keys arrive here as plain keyDowns.
+        if handleFontSizeKey(event) { return }
+        super.keyDown(with: event)
+    }
+
+    private func handleFontSizeKey(_ event: NSEvent) -> Bool {
+        guard event.modifierFlags.contains(.command),
+              let characters = event.charactersIgnoringModifiers else { return false }
+        switch characters {
+        case "+", "=":
+            onFontSizeCommand?(StickyNoteMetrics.fontSizeStep)
+            return true
+        case "-":
+            onFontSizeCommand?(-StickyNoteMetrics.fontSizeStep)
+            return true
+        case "0":
+            onFontSizeCommand?(nil)
+            return true
+        default:
+            return false
+        }
     }
 }
 

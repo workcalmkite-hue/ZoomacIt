@@ -31,6 +31,29 @@ final class StickyNoteMetricsTests: XCTestCase {
         XCTAssertEqual(StickyNoteMetrics.clampedFontSize(500), StickyNoteMetrics.maxFontSize)
     }
 
+    // MARK: - Font Scroll
+
+    func testFontScrollUpGrowsText() {
+        let size = StickyNoteMetrics.fontSize(afterScrollDeltaY: 2, isPrecise: false, from: 15)
+        XCTAssertEqual(size, 18, "One wheel notch (delta 2) grows the text by 3pt")
+    }
+
+    func testFontScrollPreciseIsFiner() {
+        let size = StickyNoteMetrics.fontSize(afterScrollDeltaY: 10, isPrecise: true, from: 15)
+        XCTAssertEqual(size, 16, accuracy: 0.001)
+    }
+
+    func testFontScrollClamps() {
+        XCTAssertEqual(
+            StickyNoteMetrics.fontSize(afterScrollDeltaY: -1000, isPrecise: false, from: 15),
+            StickyNoteMetrics.minFontSize
+        )
+        XCTAssertEqual(
+            StickyNoteMetrics.fontSize(afterScrollDeltaY: 1000, isPrecise: false, from: 15),
+            StickyNoteMetrics.maxFontSize
+        )
+    }
+
     // MARK: - Grip Drag
 
     func testGripDragGrowsRightAndDown() {
