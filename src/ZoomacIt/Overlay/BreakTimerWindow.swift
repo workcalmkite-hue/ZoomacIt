@@ -9,7 +9,10 @@ final class BreakTimerWindow: NSPanel {
 
     convenience init(at origin: CGPoint) {
         self.init(
-            contentRect: NSRect(origin: origin, size: BreakTimerWidgetMetrics.windowSize),
+            contentRect: NSRect(
+                origin: origin,
+                size: BreakTimerWidgetMetrics.windowSize(forDiameter: BreakTimerWidgetMetrics.baseDiameter)
+            ),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false

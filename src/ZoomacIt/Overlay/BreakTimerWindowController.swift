@@ -43,13 +43,18 @@ final class BreakTimerWindowController {
         let savedPosition = Settings.shared.breakTimerWidgetPosition
         let origin: CGPoint
         if let saved = savedPosition {
-            let widgetRect = CGRect(origin: saved, size: BreakTimerWidgetMetrics.windowSize)
+            let widgetRect = CGRect(
+                origin: saved,
+                size: BreakTimerWidgetMetrics.windowSize(forDiameter: BreakTimerWidgetMetrics.baseDiameter)
+            )
             // Keep the widget on whichever connected screen the user left it on;
             // fall back to the main screen only if that display is gone.
             let host = NSScreen.screens.first { $0.frame.intersects(widgetRect) } ?? screen
-            origin = BreakTimerWidgetMetrics.clamped(origin: saved, in: host.frame)
+            origin = BreakTimerWidgetMetrics.clamped(
+                origin: saved, in: host.frame, forDiameter: BreakTimerWidgetMetrics.baseDiameter)
         } else {
-            origin = BreakTimerWidgetMetrics.defaultOrigin(in: screen.frame)
+            origin = BreakTimerWidgetMetrics.defaultOrigin(
+                in: screen.frame, forDiameter: BreakTimerWidgetMetrics.baseDiameter)
         }
 
         let window = BreakTimerWindow(at: origin)

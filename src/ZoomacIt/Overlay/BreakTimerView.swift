@@ -37,7 +37,10 @@ final class BreakTimerView: NSView {
 
     init(state: BreakTimerState) {
         self.state = state
-        super.init(frame: NSRect(origin: .zero, size: BreakTimerWidgetMetrics.windowSize))
+        super.init(frame: NSRect(
+            origin: .zero,
+            size: BreakTimerWidgetMetrics.windowSize(forDiameter: BreakTimerWidgetMetrics.baseDiameter)
+        ))
         setUpControlButtons()
     }
 
@@ -51,9 +54,9 @@ final class BreakTimerView: NSView {
     private var circleFrame: NSRect {
         NSRect(
             x: 0,
-            y: BreakTimerWidgetMetrics.controlBarHeight,
-            width: BreakTimerWidgetMetrics.diameter,
-            height: BreakTimerWidgetMetrics.diameter
+            y: BreakTimerWidgetMetrics.controlBarHeight(forDiameter: BreakTimerWidgetMetrics.baseDiameter),
+            width: BreakTimerWidgetMetrics.baseDiameter,
+            height: BreakTimerWidgetMetrics.baseDiameter
         )
     }
 
@@ -112,7 +115,7 @@ final class BreakTimerView: NSView {
     }
 
     private func drawTime(in circle: NSRect) {
-        let fontSize = BreakTimerWidgetMetrics.diameter * 0.24
+        let fontSize = BreakTimerWidgetMetrics.baseDiameter * 0.24
         let font = NSFont.monospacedDigitSystemFont(ofSize: fontSize, weight: .semibold)
         let attrs: [NSAttributedString.Key: Any] = [
             .font: font,
@@ -154,7 +157,7 @@ final class BreakTimerView: NSView {
         let spacing: CGFloat = 6
         let totalWidth = buttonSize * 3 + spacing * 2
         var x = bounds.midX - totalWidth / 2
-        let y = (BreakTimerWidgetMetrics.controlBarHeight - buttonSize) / 2
+        let y = (BreakTimerWidgetMetrics.controlBarHeight(forDiameter: BreakTimerWidgetMetrics.baseDiameter) - buttonSize) / 2
 
         for button in controlButtons {
             button.frame = NSRect(x: x, y: y, width: buttonSize, height: buttonSize)
