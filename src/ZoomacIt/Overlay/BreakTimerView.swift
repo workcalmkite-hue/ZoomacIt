@@ -12,6 +12,9 @@ final class BreakTimerView: NSView {
     /// Called when the user dismisses the timer via the hover close button.
     var onDismiss: (() -> Void)?
 
+    /// Called when the user taps the play/pause button.
+    var onPlayPauseToggle: (() -> Void)?
+
     /// Called when the user scrolls over the widget to resize it.
     /// Parameters are the raw `scrollingDeltaY` and `hasPreciseScrollingDeltas`.
     var onResizeRequest: ((_ scrollDeltaY: CGFloat, _ isPrecise: Bool) -> Void)?
@@ -28,6 +31,11 @@ final class BreakTimerView: NSView {
         accessibilityDescription: "Subtract one minute",
         action: #selector(minusTapped)
     )
+    private lazy var playPauseButton = makeControlButton(
+        symbolName: "play.fill",
+        accessibilityDescription: "Start timer",
+        action: #selector(playPauseTapped)
+    )
     private lazy var closeButton = makeControlButton(
         symbolName: "xmark",
         accessibilityDescription: "Close timer",
@@ -39,8 +47,8 @@ final class BreakTimerView: NSView {
         action: #selector(plusTapped)
     )
 
-    /// The three hover control buttons, grouped for show/hide and layout.
-    private var controlButtons: [NSButton] { [minusButton, closeButton, plusButton] }
+    /// The hover control buttons, grouped for show/hide and layout.
+    private var controlButtons: [NSButton] { [minusButton, playPauseButton, plusButton, closeButton] }
 
     private var trackingArea: NSTrackingArea?
 
@@ -167,12 +175,18 @@ final class BreakTimerView: NSView {
             addSubview(button)
         }
         layoutControlButtons()
+        // The timer starts paused, so the play button must be discoverable
+        // without hovering.
+        if state.isPaused {
+            setControlButtons(hidden: false)
+        }
     }
 
     private func layoutControlButtons() {
         let buttonSize: CGFloat = 22 * widgetScale
-        let spacing: CGFloat = 6 * widgetScale
-        let totalWidth = buttonSize * 3 + spacing * 2
+        let spacing: CGFloat = 4 * widgetScale
+        let totalWidth = buttonSize * CGFloat(controlButtons.count)
+            + spacing * CGFloat(controlButtons.count - 1)
         var x = bounds.midX - totalWidth / 2
         let y = (BreakTimerWidgetMetrics.controlBarHeight(forDiameter: diameter) - buttonSize) / 2
 
@@ -194,6 +208,21 @@ final class BreakTimerView: NSView {
 
     @objc private func closeTapped() {
         onDismiss?()
+    }
+
+    @objc private func playPauseTapped() {
+        onPlayPauseToggle?()
+    }
+
+    /// Refresh the play/pause button after the controller toggles the state.
+    func playPauseStateChanged() {
+        let symbolName = state.isPaused ? "play.fill" : "pause.fill"
+        let description = state.isPaused ? "Start timer" : "Pause timer"
+        playPauseButton.image = NSImage(
+            systemSymbolName: symbolName,
+            accessibilityDescription: description
+        ) ?? NSImage()
+        needsDisplay = true
     }
 
     // MARK: - Resize
@@ -232,6 +261,9 @@ final class BreakTimerView: NSView {
     }
 
     override func mouseExited(with event: NSEvent) {
+        // While paused, keep the controls visible so the play button never
+        // disappears on the user.
+        guard !state.isPaused else { return }
         setControlButtons(hidden: true)
     }
 

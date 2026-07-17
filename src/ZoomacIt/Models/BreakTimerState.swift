@@ -17,6 +17,10 @@ final class BreakTimerState {
     /// Seconds elapsed after the timer expired (counts up from 0).
     var elapsedSinceExpiration: Int = 0
 
+    /// Whether the countdown is paused. The timer starts paused — the user must
+    /// press play to begin, and can pause/resume at any time.
+    var isPaused: Bool = true
+
     // MARK: - Appearance
 
     /// Timer text color — reuses PenColor from Draw.

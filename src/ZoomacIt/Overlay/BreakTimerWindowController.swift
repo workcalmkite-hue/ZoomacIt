@@ -39,6 +39,7 @@ final class BreakTimerWindowController {
         state.reloadFromSettings()
         state.remainingSeconds = state.defaultDuration
         state.elapsedSinceExpiration = 0
+        state.isPaused = true
 
         let diameter = Settings.shared.breakTimerWidgetDiameter
         let savedPosition = Settings.shared.breakTimerWidgetPosition
@@ -64,14 +65,35 @@ final class BreakTimerWindowController {
         view.onResizeRequest = { [weak self] deltaY, isPrecise in
             self?.resizeWidget(scrollDeltaY: deltaY, isPrecise: isPrecise)
         }
+        view.onPlayPauseToggle = { [weak self] in
+            self?.togglePause()
+        }
 
         window.contentView = view
         window.orderFront(nil)
 
         timerWindow = window
         timerView = view
+        // The countdown does not start here — the widget appears paused and the
+        // user presses play to begin.
+    }
 
-        startCountdown()
+    /// Pause or resume the countdown. While paused, both the countdown and the
+    /// expired-state pulse/count-up are frozen.
+    func togglePause() {
+        if state.isPaused {
+            state.isPaused = false
+            NSLog("[BreakTimerController] Resumed.")
+            startCountdown()
+        } else {
+            state.isPaused = true
+            NSLog("[BreakTimerController] Paused.")
+            countdownTimer?.invalidate()
+            countdownTimer = nil
+            pulseTimer?.invalidate()
+            pulseTimer = nil
+        }
+        timerView?.playPauseStateChanged()
     }
 
     func dismiss() {

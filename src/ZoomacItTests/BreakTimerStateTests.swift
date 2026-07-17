@@ -5,6 +5,11 @@ final class BreakTimerStateTests: XCTestCase {
 
     // MARK: - Default Values
 
+    func testStartsPaused() {
+        let state = BreakTimerState()
+        XCTAssertTrue(state.isPaused, "Timer must not auto-start; the user presses play")
+    }
+
     func testDefaultState() {
         let state = BreakTimerState()
         XCTAssertEqual(state.defaultDuration, 600)
