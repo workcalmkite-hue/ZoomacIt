@@ -38,7 +38,7 @@ HTML 목업(인터랙티브 프로토타입)으로 인터랙션·비주얼을 �
 ### 1. 창(Window) 구조 — `BreakTimerWindow`
 
 - `contentRect`를 화면 크기 대신 **고정 정사각형**(지름 기본값 110pt + 여백)으로 변경. 정확한 기본 지름은 구현 단계에서 확정하되, 설정 UI에 크기 조절 슬라이더는 두지 않는다(목업에서 크기 시연은 방향성 확인용이었고, 요구사항엔 크기 설정이 없었으므로 YAGNI — 필요해지면 후속 요청으로 추가).
-- `styleMask`에 `.nonactivatingPanel` 추가(`NSPanel` 서브클래스로 전환), `isFloatingPanel = true`.
+- `styleMask`에 `.nonactivatingPanel` 추가(`NSPanel` 서브클래스로 전환). **(구현 시 확정: `isFloatingPanel = true`는 의도적으로 생략 — `level = .screenSaver` 설정 이후에 켜면 AppKit이 레벨을 `.floating`으로 되돌려버리므로 설정하면 안 됨.)**
 - `level = .screenSaver`, `collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]` 그대로 유지.
 - `isMovableByWindowBackground = true` — 원의 빈 배경(버튼이 없는 영역)을 누르고 드래그하면 창이 따라 움직인다. 버튼(`NSButton` 서브뷰) 위를 누르면 AppKit이 자동으로 드래그를 억제하므로 별도 hit-test 코드가 필요 없다.
 - `ignoresMouseEvents`는 더 이상 쓰지 않는다(전체 화면을 덮지 않으므로 마우스 통과가 필요 없음) — 창 바깥은 애초에 창 영역이 아니라 다른 앱이 정상적으로 마우스를 받는다.
@@ -54,7 +54,7 @@ HTML 목업(인터랙티브 프로토타입)으로 인터랙션·비주얼을 �
 
 ### 3. 뷰 — `BreakTimerView`
 
-- 배경: 반투명 검정 원(`opacity` 설정 반영), 텍스트/링 색상은 `timerColor`.
+- 배경: 반투명 검정 원(`opacity` 설정 반영), 링 색상은 `timerColor`. **(구현 시 확정: 중앙 숫자는 사용자 승인 HTML 목업 그대로 흰색 고정 — `timerColor`는 링에만 적용. 가독성을 위해 숫자는 `opacity` 설정과도 무관하게 항상 불투명.)**
 - 진행률 링: `remainingSeconds / defaultDuration` 비율만큼 12시 방향에서 시계방향으로 그림. `draw(_:)` 내에서 `CGContext`의 `addArc`로 그리거나, 별도 `CAShapeLayer`(`wantsLayer = true`로 전환) 중 구현 단계에서 성능/코드 단순성을 비교해 선택.
 - 중앙 숫자: 기존 `formattedTime`/`formattedElapsed`를 재사용하되, 3×3 그리드 포지셔닝(`BreakTimerPosition.origin(forTextSize:in:)`) 대신 항상 원 중앙에 그린다.
 - 만료 시: 링 색을 고정 빨강으로 바꾸고 0.5~1초 주기로 알파를 오가는 펄스 애니메이션(타이머 틱에서 `needsDisplay` 트리거 또는 `CABasicAnimation`). `showElapsed`가 켜져 있으면 숫자를 경과 카운트업으로, 꺼져 있으면 "0:00" 고정 표시.
