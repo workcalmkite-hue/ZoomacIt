@@ -19,10 +19,14 @@ final class HotkeyManager: @unchecked Sendable {
     /// Called when the Live Zoom hotkey (⌃4) is triggered.
     var onLiveZoomHotkey: (() -> Void)?
 
+    /// Called when the Memo hotkey (⌃M) is triggered.
+    var onMemoHotkey: (() -> Void)?
+
     private var hotKeyRef: EventHotKeyRef?
     private var zoomHotKeyRef: EventHotKeyRef?
     private var breakHotKeyRef: EventHotKeyRef?
     private var liveZoomHotKeyRef: EventHotKeyRef?
+    private var memoHotKeyRef: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
 
     /// Signature used to identify our hot-key events ('ZmIt')
@@ -31,6 +35,7 @@ final class HotkeyManager: @unchecked Sendable {
     private let drawHotKeyID: UInt32 = 1
     private let breakHotKeyID: UInt32 = 2
     private let liveZoomHotKeyID: UInt32 = 3
+    private let memoHotKeyID: UInt32 = 4
 
     private init() {}
 
@@ -145,6 +150,26 @@ final class HotkeyManager: @unchecked Sendable {
         NSLog("[HotkeyManager] Live Zoom hotkey registered: %@",
               Settings.hotkeyDisplayString(keyCode: Settings.shared.liveZoomHotkeyKeyCode,
                                            modifiers: Settings.shared.liveZoomHotkeyModifiers))
+
+        // Register Memo hotkey
+        let memoKeyID = EventHotKeyID(signature: hotKeySignature, id: memoHotKeyID)
+        let memoStatus = RegisterEventHotKey(
+            Settings.shared.memoHotkeyKeyCode,
+            Settings.shared.memoHotkeyModifiers,
+            memoKeyID,
+            GetApplicationEventTarget(),
+            0,
+            &memoHotKeyRef
+        )
+
+        guard memoStatus == noErr else {
+            NSLog("[HotkeyManager] Failed to register memo hotkey: %d", memoStatus)
+            return
+        }
+
+        NSLog("[HotkeyManager] Memo hotkey registered: %@",
+              Settings.hotkeyDisplayString(keyCode: Settings.shared.memoHotkeyKeyCode,
+                                           modifiers: Settings.shared.memoHotkeyModifiers))
     }
 
     func stop() {
@@ -163,6 +188,10 @@ final class HotkeyManager: @unchecked Sendable {
         if let ref = liveZoomHotKeyRef {
             UnregisterEventHotKey(ref)
             liveZoomHotKeyRef = nil
+        }
+        if let ref = memoHotKeyRef {
+            UnregisterEventHotKey(ref)
+            memoHotKeyRef = nil
         }
         if let handler = eventHandlerRef {
             RemoveEventHandler(handler)
@@ -210,6 +239,10 @@ final class HotkeyManager: @unchecked Sendable {
         } else if hotKeyID.id == liveZoomHotKeyID {
             DispatchQueue.main.async { [weak self] in
                 self?.onLiveZoomHotkey?()
+            }
+        } else if hotKeyID.id == memoHotKeyID {
+            DispatchQueue.main.async { [weak self] in
+                self?.onMemoHotkey?()
             }
         }
     }

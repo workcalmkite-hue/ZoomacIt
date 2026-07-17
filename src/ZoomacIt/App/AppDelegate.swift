@@ -36,6 +36,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotkeyManager.onLiveZoomHotkey = { [weak self] in
             self?.toggleLiveZoomMode()
         }
+        hotkeyManager.onMemoHotkey = { [weak self] in
+            self?.spawnStickyNote()
+        }
         hotkeyManager.start()
     }
 
