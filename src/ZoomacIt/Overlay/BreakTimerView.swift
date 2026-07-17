@@ -3,21 +3,35 @@ import QuartzCore
 
 /// Draws the Break Timer circular widget: a translucent circle, a progress ring for
 /// time remaining, and the countdown number centered inside it. Hover controls
-/// (added in a later task) live in the empty strip below the circle
-/// (`BreakTimerWidgetMetrics.controlBarHeight`).
+/// live in the strip below the circle (`BreakTimerWidgetMetrics.controlBarHeight`).
 @MainActor
 final class BreakTimerView: NSView {
 
     let state: BreakTimerState
 
-    /// Called when the user dismisses the timer via the hover close button (added later).
+    /// Called when the user dismisses the timer via the hover close button.
     var onDismiss: (() -> Void)?
 
     private let ringLineWidth: CGFloat = 6
 
-    private lazy var minusButton = makeControlButton(symbolName: "minus", action: #selector(minusTapped))
-    private lazy var closeButton = makeControlButton(symbolName: "xmark", action: #selector(closeTapped))
-    private lazy var plusButton = makeControlButton(symbolName: "plus", action: #selector(plusTapped))
+    private lazy var minusButton = makeControlButton(
+        symbolName: "minus",
+        accessibilityDescription: "Subtract one minute",
+        action: #selector(minusTapped)
+    )
+    private lazy var closeButton = makeControlButton(
+        symbolName: "xmark",
+        accessibilityDescription: "Close timer",
+        action: #selector(closeTapped)
+    )
+    private lazy var plusButton = makeControlButton(
+        symbolName: "plus",
+        accessibilityDescription: "Add one minute",
+        action: #selector(plusTapped)
+    )
+
+    /// The three hover control buttons, grouped for show/hide and layout.
+    private var controlButtons: [NSButton] { [minusButton, closeButton, plusButton] }
 
     private var trackingArea: NSTrackingArea?
 
@@ -70,7 +84,8 @@ final class BreakTimerView: NSView {
             let alpha = BreakTimerRingGeometry.expiredPulseAlpha(elapsedTime: CACurrentMediaTime())
             let full = NSBezierPath(ovalIn: ringRect)
             full.lineWidth = ringLineWidth
-            full.lineCapStyle = .round
+            // Deliberately ignores state.opacity so the expiration alert stays visible
+            // even when the widget's overall opacity is set low.
             NSColor.systemRed.withAlphaComponent(alpha).setStroke()
             full.stroke()
             return
@@ -120,9 +135,9 @@ final class BreakTimerView: NSView {
 
     // MARK: - Hover Controls
 
-    private func makeControlButton(symbolName: String, action: Selector) -> NSButton {
+    private func makeControlButton(symbolName: String, accessibilityDescription: String, action: Selector) -> NSButton {
         let button = NSButton(
-            image: NSImage(systemSymbolName: symbolName, accessibilityDescription: nil) ?? NSImage(),
+            image: NSImage(systemSymbolName: symbolName, accessibilityDescription: accessibilityDescription) ?? NSImage(),
             target: self,
             action: action
         )
@@ -135,14 +150,13 @@ final class BreakTimerView: NSView {
     }
 
     private func setUpControlButtons() {
-        let buttons = [minusButton, closeButton, plusButton]
         let buttonSize: CGFloat = 22
         let spacing: CGFloat = 6
         let totalWidth = buttonSize * 3 + spacing * 2
         var x = bounds.midX - totalWidth / 2
         let y = (BreakTimerWidgetMetrics.controlBarHeight - buttonSize) / 2
 
-        for button in buttons {
+        for button in controlButtons {
             button.frame = NSRect(x: x, y: y, width: buttonSize, height: buttonSize)
             addSubview(button)
             x += buttonSize + spacing
@@ -191,7 +205,7 @@ final class BreakTimerView: NSView {
     private func setControlButtons(hidden: Bool) {
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.15
-            for button in [minusButton, closeButton, plusButton] {
+            for button in controlButtons {
                 button.animator().alphaValue = hidden ? 0 : 1
             }
         }

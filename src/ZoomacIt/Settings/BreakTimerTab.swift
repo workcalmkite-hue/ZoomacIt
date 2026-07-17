@@ -57,7 +57,6 @@ struct BreakTimerTab: View {
                         .frame(width: 40, alignment: .trailing)
                         .monospacedDigit()
                 }
-
             }
 
             Section("Options") {

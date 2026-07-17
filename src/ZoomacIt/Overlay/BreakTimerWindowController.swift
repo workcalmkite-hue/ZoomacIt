@@ -41,10 +41,16 @@ final class BreakTimerWindowController {
         state.elapsedSinceExpiration = 0
 
         let savedPosition = Settings.shared.breakTimerWidgetPosition
-        let origin = BreakTimerWidgetMetrics.clamped(
-            origin: savedPosition ?? BreakTimerWidgetMetrics.defaultOrigin(in: screen.frame),
-            in: screen.frame
-        )
+        let origin: CGPoint
+        if let saved = savedPosition {
+            let widgetRect = CGRect(origin: saved, size: BreakTimerWidgetMetrics.windowSize)
+            // Keep the widget on whichever connected screen the user left it on;
+            // fall back to the main screen only if that display is gone.
+            let host = NSScreen.screens.first { $0.frame.intersects(widgetRect) } ?? screen
+            origin = BreakTimerWidgetMetrics.clamped(origin: saved, in: host.frame)
+        } else {
+            origin = BreakTimerWidgetMetrics.defaultOrigin(in: screen.frame)
+        }
 
         let window = BreakTimerWindow(at: origin)
         let view = BreakTimerView(state: state)
@@ -105,6 +111,11 @@ final class BreakTimerWindowController {
             if justExpired {
                 NSLog("[BreakTimerController] Timer expired!")
                 self.playExpirationSound()
+            }
+
+            // Covers expiration reached via the − button as well as the normal tick,
+            // where justExpired alone would miss it.
+            if self.state.isExpired && self.pulseTimer == nil {
                 self.startPulsing()
             }
 

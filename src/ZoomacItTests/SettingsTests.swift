@@ -139,6 +139,7 @@ final class SettingsTests: XCTestCase {
         Settings.shared.defaultPenWidth = 20.0
         Settings.shared.breakTimerDefaultDuration = 120
         Settings.shared.vanishingPenLifetime = 7.0
+        Settings.shared.breakTimerWidgetPosition = CGPoint(x: 10, y: 10)
 
         // Reset
         Settings.shared.resetToDefaults()
@@ -148,6 +149,7 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(Settings.shared.defaultPenWidth, 3.0)
         XCTAssertEqual(Settings.shared.breakTimerDefaultDuration, 600)
         XCTAssertEqual(Settings.shared.vanishingPenLifetime, 3.0, accuracy: 0.001)
+        XCTAssertNil(Settings.shared.breakTimerWidgetPosition)
     }
 
     // MARK: - Display Utilities
