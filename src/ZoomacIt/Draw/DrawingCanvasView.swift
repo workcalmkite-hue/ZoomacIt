@@ -541,7 +541,17 @@ final class DrawingCanvasView: NSView {
     override var acceptsFirstResponder: Bool { true }
 
     override func keyDown(with event: NSEvent) {
-        guard let characters = event.charactersIgnoringModifiers?.uppercased() else { return }
+        // Letter shortcuts resolve from the physical key so they work under a
+        // Korean input source too (ㅍ = V, etc.); non-letter keys (Escape, Tab,
+        // Space, arrows) keep the character-based path.
+        let characters: String
+        if let letter = ANSIKey.letter(forKeyCode: event.keyCode) {
+            characters = letter
+        } else if let chars = event.charactersIgnoringModifiers?.uppercased() {
+            characters = chars
+        } else {
+            return
+        }
         let modifiers = event.modifierFlags
 
         switch characters {
