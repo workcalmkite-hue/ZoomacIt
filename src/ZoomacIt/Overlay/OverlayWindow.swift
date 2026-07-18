@@ -15,7 +15,10 @@ final class OverlayWindow: NSWindow {
         isOpaque = false
         backgroundColor = .clear
         hasShadow = false
-        level = .init(rawValue: Int(CGWindowLevelForKey(.maximumWindow)))
+        // popUpMenu (101): above the menu bar, Dock, and all normal windows,
+        // but below screenshot-tool overlays like Snipaste's snipper (102)
+        // so region selection still works while an overlay is up.
+        level = .init(rawValue: Int(CGWindowLevelForKey(.popUpMenuWindow)))
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         isReleasedWhenClosed = false
         acceptsMouseMovedEvents = true
