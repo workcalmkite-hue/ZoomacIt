@@ -86,8 +86,11 @@ final class BreakTimerView: NSView {
     }
 
     private func drawFill(in circle: NSRect) {
+        // The center stays visually transparent, but a fully transparent region of a
+        // borderless window is click-through — this near-zero fill keeps the middle
+        // draggable via isMovableByWindowBackground.
         let inset = circle.insetBy(dx: circle.width * 0.08, dy: circle.height * 0.08)
-        NSColor.black.withAlphaComponent(0.55 * state.opacity).setFill()
+        NSColor.black.withAlphaComponent(0.01).setFill()
         NSBezierPath(ovalIn: inset).fill()
     }
 
@@ -135,9 +138,16 @@ final class BreakTimerView: NSView {
     private func drawTime(in circle: NSRect) {
         let fontSize = diameter * 0.24
         let font = NSFont.monospacedDigitSystemFont(ofSize: fontSize, weight: .semibold)
+        // With no dark fill behind it, the white digits need a shadow to stay
+        // readable over light content.
+        let shadow = NSShadow()
+        shadow.shadowColor = NSColor.black.withAlphaComponent(0.8)
+        shadow.shadowBlurRadius = 3 * widgetScale
+        shadow.shadowOffset = .zero
         let attrs: [NSAttributedString.Key: Any] = [
             .font: font,
-            .foregroundColor: NSColor.white
+            .foregroundColor: NSColor.white,
+            .shadow: shadow
         ]
         let displayText: String
         if state.isExpired {
