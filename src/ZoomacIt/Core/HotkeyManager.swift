@@ -22,11 +22,15 @@ final class HotkeyManager: @unchecked Sendable {
     /// Called when the Memo hotkey (⌃M) is triggered.
     var onMemoHotkey: (() -> Void)?
 
+    /// Called when the Mouse Spotlight hotkey (⌘1) is triggered.
+    var onMouseSpotlightHotkey: (() -> Void)?
+
     private var hotKeyRef: EventHotKeyRef?
     private var zoomHotKeyRef: EventHotKeyRef?
     private var breakHotKeyRef: EventHotKeyRef?
     private var liveZoomHotKeyRef: EventHotKeyRef?
     private var memoHotKeyRef: EventHotKeyRef?
+    private var mouseSpotlightHotKeyRef: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
 
     /// Signature used to identify our hot-key events ('ZmIt')
@@ -36,6 +40,7 @@ final class HotkeyManager: @unchecked Sendable {
     private let breakHotKeyID: UInt32 = 2
     private let liveZoomHotKeyID: UInt32 = 3
     private let memoHotKeyID: UInt32 = 4
+    private let mouseSpotlightHotKeyID: UInt32 = 5
 
     private init() {}
 
@@ -170,6 +175,25 @@ final class HotkeyManager: @unchecked Sendable {
         NSLog("[HotkeyManager] Memo hotkey registered: %@",
               Settings.hotkeyDisplayString(keyCode: Settings.shared.memoHotkeyKeyCode,
                                            modifiers: Settings.shared.memoHotkeyModifiers))
+
+        // Register Mouse Spotlight hotkey (⌘1) — fixed in code, not user-remappable in v1.
+        let mouseSpotlightKeyID = EventHotKeyID(signature: hotKeySignature, id: mouseSpotlightHotKeyID)
+        let mouseSpotlightStatus = RegisterEventHotKey(
+            UInt32(kVK_ANSI_1),
+            UInt32(cmdKey),
+            mouseSpotlightKeyID,
+            GetApplicationEventTarget(),
+            0,
+            &mouseSpotlightHotKeyRef
+        )
+
+        guard mouseSpotlightStatus == noErr else {
+            NSLog("[HotkeyManager] Failed to register mouse spotlight hotkey: %d", mouseSpotlightStatus)
+            return
+        }
+
+        NSLog("[HotkeyManager] Mouse Spotlight hotkey registered: %@",
+              Settings.hotkeyDisplayString(keyCode: UInt32(kVK_ANSI_1), modifiers: UInt32(cmdKey)))
     }
 
     func stop() {
@@ -192,6 +216,10 @@ final class HotkeyManager: @unchecked Sendable {
         if let ref = memoHotKeyRef {
             UnregisterEventHotKey(ref)
             memoHotKeyRef = nil
+        }
+        if let ref = mouseSpotlightHotKeyRef {
+            UnregisterEventHotKey(ref)
+            mouseSpotlightHotKeyRef = nil
         }
         if let handler = eventHandlerRef {
             RemoveEventHandler(handler)
@@ -243,6 +271,10 @@ final class HotkeyManager: @unchecked Sendable {
         } else if hotKeyID.id == memoHotKeyID {
             DispatchQueue.main.async { [weak self] in
                 self?.onMemoHotkey?()
+            }
+        } else if hotKeyID.id == mouseSpotlightHotKeyID {
+            DispatchQueue.main.async { [weak self] in
+                self?.onMouseSpotlightHotkey?()
             }
         }
     }
