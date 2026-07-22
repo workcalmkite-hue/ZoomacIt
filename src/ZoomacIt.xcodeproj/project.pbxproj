@@ -42,6 +42,7 @@
 		B3C4D5E6F7A8B9C0D1E2F3A4 /* BreakTimerWidgetMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2B3C4D5E6F7A8B9C0D1E2F3 /* BreakTimerWidgetMetrics.swift */; };
 		628A2991746D4EB780574661 /* MouseSpotlightGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FF9F78E3995451DBB9D28F5 /* MouseSpotlightGeometry.swift */; };
 		34F7A2AE119543E3BE40B7E6 /* MouseSpotlightOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAD6EFBA51EA45E69F6A3688 /* MouseSpotlightOverlayView.swift */; };
+		612D72DD478D49FDADFCD268 /* MouseSpotlightWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97AD78A44EBF45A89ABB208F /* MouseSpotlightWindowController.swift */; };
 		B4CBD67B2A6AEEB3109F5792 /* CGContextExtensionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A10C3F6A8082DAF58EE6949 /* CGContextExtensionsTests.swift */; };
 		C5D6E7F8A9B0C1D2E3F4A5B6 /* BreakTimerWidgetMetricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C5D6E7F8A9B0C1D2E3F4A5 /* BreakTimerWidgetMetricsTests.swift */; };
 		BC0FB44069DD457F836FD4CD /* MouseSpotlightGeometryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E700B2BFF74F4F8C9284FDC8 /* MouseSpotlightGeometryTests.swift */; };
@@ -126,6 +127,7 @@
 		A2B3C4D5E6F7A8B9C0D1E2F3 /* BreakTimerWidgetMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakTimerWidgetMetrics.swift; sourceTree = "<group>"; };
 		6FF9F78E3995451DBB9D28F5 /* MouseSpotlightGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MouseSpotlightGeometry.swift; sourceTree = "<group>"; };
 		DAD6EFBA51EA45E69F6A3688 /* MouseSpotlightOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MouseSpotlightOverlayView.swift; sourceTree = "<group>"; };
+		97AD78A44EBF45A89ABB208F /* MouseSpotlightWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MouseSpotlightWindowController.swift; sourceTree = "<group>"; };
 		B1C2D3E4F5A6B7C8D9E0F1A2 /* VanishingPenFader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VanishingPenFader.swift; sourceTree = "<group>"; };
 		B4C5D6E7F8A9B0C1D2E3F4A5 /* BreakTimerWidgetMetricsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakTimerWidgetMetricsTests.swift; sourceTree = "<group>"; };
 		E700B2BFF74F4F8C9284FDC8 /* MouseSpotlightGeometryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MouseSpotlightGeometryTests.swift; sourceTree = "<group>"; };
@@ -215,6 +217,7 @@
 				A2B3C4D5E6F7A8B9C0D1E2F3 /* BreakTimerWidgetMetrics.swift */,
 				6FF9F78E3995451DBB9D28F5 /* MouseSpotlightGeometry.swift */,
 				DAD6EFBA51EA45E69F6A3688 /* MouseSpotlightOverlayView.swift */,
+				97AD78A44EBF45A89ABB208F /* MouseSpotlightWindowController.swift */,
 				1B27C880479A92E16A621C7B /* BreakTimerView.swift */,
 				AFD499A142CC237EF664DD96 /* BreakTimerWindow.swift */,
 				BE3023CD2A9E7BBC51D21E79 /* BreakTimerWindowController.swift */,
@@ -430,6 +433,7 @@
 				B3C4D5E6F7A8B9C0D1E2F3A4 /* BreakTimerWidgetMetrics.swift in Sources */,
 				628A2991746D4EB780574661 /* MouseSpotlightGeometry.swift in Sources */,
 				34F7A2AE119543E3BE40B7E6 /* MouseSpotlightOverlayView.swift in Sources */,
+				612D72DD478D49FDADFCD268 /* MouseSpotlightWindowController.swift in Sources */,
 				FFC7A2554BCDAF31EE2F2630 /* CGContext+Extensions.swift in Sources */,
 				D4EFADF937D92699DC1BB041 /* DrawTab.swift in Sources */,
 				DD29E7A2CA8719348BC7F361 /* DrawingCanvasView.swift in Sources */,
