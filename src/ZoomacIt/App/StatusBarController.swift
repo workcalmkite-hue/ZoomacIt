@@ -89,6 +89,11 @@ final class StatusBarController: NSObject {
         liveZoomItem.target = self
         menu.addItem(liveZoomItem)
 
+        let mouseSpotlightItem = NSMenuItem(title: "Mouse Spotlight", action: #selector(mouseSpotlightAction), keyEquivalent: "1")
+        mouseSpotlightItem.keyEquivalentModifierMask = [.command]
+        mouseSpotlightItem.target = self
+        menu.addItem(mouseSpotlightItem)
+
         menu.addItem(.separator())
 
         let prefsItem = NSMenuItem(title: "Preferences…", action: #selector(preferencesAction), keyEquivalent: ",")
@@ -126,6 +131,10 @@ final class StatusBarController: NSObject {
 
     @objc private func liveZoomAction() {
         HotkeyManager.shared.onLiveZoomHotkey?()
+    }
+
+    @objc private func mouseSpotlightAction() {
+        HotkeyManager.shared.onMouseSpotlightHotkey?()
     }
 
     @objc private func preferencesAction() {
