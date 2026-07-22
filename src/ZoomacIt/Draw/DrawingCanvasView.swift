@@ -51,13 +51,12 @@ final class DrawingCanvasView: NSView {
     private var freehandPoints: [CGPoint] = []
     private var isDragging: Bool = false
 
-    /// The shape type for the current gesture, locked in from the modifier
-    /// keys held at `mouseDown`. Deliberately NOT recomputed on every
-    /// `mouseDragged`/`mouseUp` — if a modifier (e.g. Shift for `.line`) is
-    /// released mid-drag, the tool must not flip to `.freehand`, since
-    /// `freehandPoints` only ever contains `dragOrigin` in that case and the
-    /// resulting curve snaps back to the drag's start point.
-    private var activeShapeType: ShapeType = .freehand
+    /// The most recent real mouse position during a drag, in view coordinates.
+    /// `flagsChanged` (fired when Shift/Control/etc. is pressed or released
+    /// mid-drag) reuses this instead of `event.locationInWindow`, which is
+    /// not a mouse-position event and does not carry the actual cursor
+    /// location — using it directly snapped the preview to a bogus point.
+    private var lastDragPoint: CGPoint = .zero
 
     // MARK: - Vanishing Pen
 
@@ -417,6 +416,7 @@ final class DrawingCanvasView: NSView {
 
         let point = convert(event.locationInWindow, from: nil)
         dragOrigin = point
+        lastDragPoint = point
 
         if drawingState.activeTool == .spotlight {
             spotlightDragRect = CGRect(origin: point, size: .zero)
@@ -425,9 +425,6 @@ final class DrawingCanvasView: NSView {
             activeFreehand = nil
             return
         }
-
-        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        activeShapeType = drawingState.currentShapeType(modifiers: modifiers)
 
         freehandPoints = [point]
         isDragging = true
@@ -441,7 +438,14 @@ final class DrawingCanvasView: NSView {
         guard isDragging else { return }
 
         let currentPoint = convert(event.locationInWindow, from: nil)
+        lastDragPoint = currentPoint
+        updateDragPreview(at: currentPoint, modifierFlags: event.modifierFlags)
+    }
 
+    /// Shared by `mouseDragged` (real cursor motion) and `flagsChanged`
+    /// (modifier-only changes mid-drag) so both update the same preview
+    /// state from a trustworthy point.
+    private func updateDragPreview(at currentPoint: CGPoint, modifierFlags: NSEvent.ModifierFlags) {
         if drawingState.activeTool == .spotlight {
             spotlightDragRect = CGRect(
                 x: dragOrigin.x,
@@ -453,7 +457,10 @@ final class DrawingCanvasView: NSView {
             return
         }
 
-        switch activeShapeType {
+        let modifiers = modifierFlags.intersection(.deviceIndependentFlagsMask)
+        let shapeType = drawingState.currentShapeType(modifiers: modifiers)
+
+        switch shapeType {
         case .freehand:
             freehandPoints.append(currentPoint)
             activeFreehand = FreehandRenderer.smoothedPath(from: freehandPoints)
@@ -506,9 +513,11 @@ final class DrawingCanvasView: NSView {
         }
 
         let currentPoint = convert(event.locationInWindow, from: nil)
+        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        let shapeType = drawingState.currentShapeType(modifiers: modifiers)
 
         if drawingState.isVanishingPenEnabled {
-            vanishingStrokes.append(makeVanishingStroke(shapeType: activeShapeType, endPoint: currentPoint))
+            vanishingStrokes.append(makeVanishingStroke(shapeType: shapeType, endPoint: currentPoint))
             startVanishingTimerIfNeeded()
         } else {
             // Push current state for undo
@@ -520,7 +529,7 @@ final class DrawingCanvasView: NSView {
 
             // Composite the completed stroke onto finishedLayer
             finishedLayer = compositeStrokeOntoFinished(
-                shapeType: activeShapeType,
+                shapeType: shapeType,
                 endPoint: currentPoint
             )
         }
@@ -723,9 +732,12 @@ final class DrawingCanvasView: NSView {
     }
 
     override func flagsChanged(with event: NSEvent) {
-        // Modifier changes during drag cause shape type to update.
+        // Modifier changes during drag cause shape type to update. Reuse the
+        // last real mouse position (lastDragPoint) rather than this event's
+        // locationInWindow — flagsChanged is not a mouse-position event and
+        // its locationInWindow does not track the actual cursor.
         if isDragging {
-            mouseDragged(with: event)
+            updateDragPreview(at: lastDragPoint, modifierFlags: event.modifierFlags)
         }
         // Update cursor to reflect shape tool
         if drawingState.activeTool != .spotlight {
