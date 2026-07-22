@@ -1,4 +1,4 @@
-# Spotlight — Design
+# Mouse Spotlight — Design
 
 **Date:** 2026-07-22
 **Status:** Approved
@@ -9,13 +9,22 @@ Replace Mouseposé (third-party app with an unregistered-version watermark) with
 native ZoomacIt feature: a screen-dimming spotlight that follows the cursor, plus
 a click ripple effect, both toggled by a single hotkey.
 
+## Naming Note
+
+Draw mode (⌃2) already has an unrelated tool called "Spotlight" (`S` key): the
+user drags a fixed rectangle that stays dimmed-outside once confirmed, as a
+static annotation — it doesn't move and isn't a global overlay. This new
+feature is a different thing entirely (global, cursor-following, click-through,
+circular), so it's named **Mouse Spotlight** throughout code, Settings keys,
+and this doc to avoid confusion with the existing Draw-mode tool.
+
 ## Behavior
 
 - **Hotkey:** ⌘1, toggles on/off. Fixed in code for v1 — not exposed in the
   Settings hotkey-customization UI (per user decision; can be added later if
   needed).
 - **Click-through, not modal.** Unlike Draw (⌃2) and Zoom (⌃1/⌃4), which grab
-  keyboard/mouse input via a key window, Spotlight must let the user keep
+  keyboard/mouse input via a key window, Mouse Spotlight must let the user keep
   working normally in whatever app is underneath. The overlay window sets
   `ignoresMouseEvents = true` and never becomes key/main.
 - **Visual:** the screen (outside the spotlight) is dimmed with a translucent
@@ -29,54 +38,61 @@ a click ripple effect, both toggled by a single hotkey.
   regardless of which app has focus.
 - **Multi-monitor:** the overlay is presented on the screen currently
   containing the cursor (same `NSScreen.screenContainingMouse` pattern already
-  used by Draw/Zoom). If the cursor crosses to a different screen while
+  used by Draw/Zoom). If the cursor crosses to a different screen while Mouse
   Spotlight is on, the controller tears down the overlay on the old screen and
   presents it on the new one.
-- **Resize:** while Spotlight is on, scrolling (trackpad or wheel) grows/
+- **Resize:** while Mouse Spotlight is on, scrolling (trackpad or wheel) grows/
   shrinks the hole radius live, same interaction pattern as the Break Timer
   widget's scroll-to-resize. The chosen radius persists across sessions.
 - **Click ripple:** a global `NSEvent` monitor on `.leftMouseDown` /
   `.rightMouseDown` (mouse-event global monitors need no extra permission)
   spawns a ring at the click point that expands and fades out, then removes
   itself. Bundled into the same ⌘1 toggle — no independent on/off (per user
-  decision); it is active exactly when Spotlight is active.
+  decision); it is active exactly when Mouse Spotlight is active.
 - Pressing ⌘1 again tears down the overlay window, the mouse-location timer,
-  and the click monitor.
+  and the click/scroll monitors.
+- **Menu bar:** a "Mouse Spotlight" item is added to the status bar menu
+  alongside Zoom/Draw/Break/Live Zoom (all four already have one), with
+  keyEquivalent `1` + ⌘ so it stays consistent with those items and works as
+  an alternate way to toggle. Not customizable (matches the fixed hotkey).
 
 ## Non-Goals
 
-- No darkness slider, no Settings tab / hotkey remapping UI for Spotlight (all
-  per explicit user decision — revisit only if requested later).
+- No darkness slider, no Settings tab / hotkey remapping UI for Mouse
+  Spotlight (all per explicit user decision — revisit only if requested
+  later).
 - No independent toggle for the click ripple.
 - No screen-pixel capture (ScreenCaptureKit) — considered and rejected because
-  Spotlight only needs to overlay a mask, not read or reproduce actual screen
-  content the way Live Zoom does; capture would add cost with no benefit here.
+  Mouse Spotlight only needs to overlay a mask, not read or reproduce actual
+  screen content the way Live Zoom does; capture would add cost with no
+  benefit here.
 
 ## Architecture (follows existing boundaries)
 
-1. **`SpotlightGeometry`** (`Overlay/SpotlightGeometry.swift`, pure struct, no
-   AppKit) — mirrors the `BreakTimerRingGeometry` / `BreakTimerWidgetMetrics`
-   pattern used elsewhere in this codebase:
+1. **`MouseSpotlightGeometry`** (`Overlay/MouseSpotlightGeometry.swift`, pure
+   struct, no AppKit) — mirrors the `BreakTimerRingGeometry` /
+   `BreakTimerWidgetMetrics` pattern used elsewhere in this codebase:
    - `minRadius`, `maxRadius`, `defaultRadius` constants.
    - `clampedRadius(_:)`.
    - `radius(afterScrollDeltaY:isPrecise:from:)` — same precise-vs-line-delta
      scroll math as `BreakTimerWidgetMetrics.diameter(afterScrollDeltaY:...)`.
    - `holePath(center:radius:in:)` — returns the even-odd `CGPath` (full-screen
      rect minus circle) used as the mask layer's path.
-2. **`SpotlightOverlayView`** (`Overlay/SpotlightOverlayView.swift`) —
-   layer-backed `NSView` covering the full screen frame:
+2. **`MouseSpotlightOverlayView`** (`Overlay/MouseSpotlightOverlayView.swift`)
+   — layer-backed `NSView` covering the full screen frame:
    - `layer?.backgroundColor` = dimming gray at fixed opacity.
    - `layer?.mask` = a `CAShapeLayer` whose `path` is
-     `SpotlightGeometry.holePath(...)`, updated on every mouse-location tick
-     (cheap — just reassigns the mask's `path`, no relayout).
-   - Hosts click-ripple `CAShapeLayer`s as unmasked sublayers on top, so ripples
-     are visible even where the dimming mask has cut a hole.
+     `MouseSpotlightGeometry.holePath(...)`, updated on every mouse-location
+     tick (cheap — just reassigns the mask's `path`, no relayout).
+   - Hosts click-ripple `CAShapeLayer`s as unmasked sublayers on top, so
+     ripples are visible even where the dimming mask has cut a hole.
    - The view never overrides `scrollWheel(with:)` — since the window is
-     click-through, no local event ever reaches it. Scroll-to-resize is instead
-     read via a global `.scrollWheel` monitor at the controller level, the same
-     mechanism as the mouse-moved/mouseDown monitors below.
-3. **`SpotlightWindowController`** (`Overlay/SpotlightWindowController.swift`)
-   — owns the toggle lifecycle:
+     click-through, no local event ever reaches it. Scroll-to-resize is
+     instead read via a global `.scrollWheel` monitor at the controller level,
+     the same mechanism as the mouse-moved/mouseDown monitors below.
+3. **`MouseSpotlightWindowController`**
+   (`Overlay/MouseSpotlightWindowController.swift`) — owns the toggle
+   lifecycle:
    - `show()` / `dismiss()`, mirroring `OverlayWindowController`/
      `LiveZoomWindowController`'s shape.
    - Creates a borderless `OverlayWindow`-style window (click-through variant:
@@ -84,18 +100,22 @@ a click ripple effect, both toggled by a single hotkey.
      `makeKeyAndOrderFront`) sized to the screen containing the mouse.
    - Owns the mouse-location polling timer, the global mouse-moved/mouseDown/
      scroll monitors, and screen-crossing re-presentation.
-   - Reads/writes the persisted radius via `Settings.spotlightRadius`.
-4. **`HotkeyManager`** — add `onSpotlightHotkey: (() -> Void)?` and register
-   ⌘1 (`kVK_ANSI_1` + `cmdKey`) via the same Carbon `RegisterEventHotKey` path
-   used for the four existing hotkeys, but with the keyCode/modifier constants
-   fixed (not read from `Settings`, since this hotkey isn't user-remappable in
-   v1).
-5. **`Settings`** — add `spotlightRadius: CGFloat` (UserDefaults key
-   `spotlightRadius`), same read-clamp/write-immediately pattern as
+   - Reads/writes the persisted radius via `Settings.mouseSpotlightRadius`.
+4. **`HotkeyManager`** — add `onMouseSpotlightHotkey: (() -> Void)?` and
+   register ⌘1 (`kVK_ANSI_1` + `cmdKey`) via the same Carbon
+   `RegisterEventHotKey` path used for the four existing hotkeys, but with the
+   keyCode/modifier constants fixed (not read from `Settings`, since this
+   hotkey isn't user-remappable in v1).
+5. **`Settings`** — add `mouseSpotlightRadius: CGFloat` (UserDefaults key
+   `mouseSpotlightRadius`), same read-clamp/write-immediately pattern as
    `breakTimerWidgetDiameter`.
-6. **`AppDelegate`** — wire `HotkeyManager.onSpotlightHotkey` to toggle
-   `SpotlightWindowController`, following the existing hotkey-to-controller
+6. **`AppDelegate`** — wire `HotkeyManager.onMouseSpotlightHotkey` to toggle
+   `MouseSpotlightWindowController`, following the existing hotkey-to-controller
    wiring for Draw/Zoom/Break/Memo.
+7. **`StatusBarController`** — add a "Mouse Spotlight" `NSMenuItem`
+   (keyEquivalent `"1"`, modifier mask `[.command]`) next to the existing
+   Zoom/Draw/Break/Live Zoom items, wired to the same
+   `HotkeyManager.onMouseSpotlightHotkey` toggle.
 
 ## Testing
 
@@ -112,12 +132,12 @@ Pure-geometry tests in the existing style (no GUI), mirroring
 Human GUI verification (end of implementation, same caveat as prior ZoomacIt
 features — agents can't drive this):
 
-- ⌘1 toggles Spotlight on/off from anywhere, without stealing focus from the
-  foreground app.
-- Clicking/typing in the app underneath works normally while Spotlight is on
-  (click-through confirmed).
+- ⌘1 (hotkey and menu item) toggles Mouse Spotlight on/off from anywhere,
+  without stealing focus from the foreground app.
+- Clicking/typing in the app underneath works normally while Mouse Spotlight
+  is on (click-through confirmed).
 - Hole follows the cursor smoothly, including across multiple monitors.
 - Scroll resizes the hole live; size persists across ⌘1 off/on and app
   relaunch.
 - Click ripple appears at the click point and fades out; disappears along
-  with Spotlight when toggled off.
+  with Mouse Spotlight when toggled off.
