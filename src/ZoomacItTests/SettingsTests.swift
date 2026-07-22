@@ -161,6 +161,37 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(Settings.shared.breakTimerWidgetDiameter, BreakTimerWidgetMetrics.baseDiameter)
     }
 
+    // MARK: - Mouse Spotlight
+
+    func testMouseSpotlightRadiusDefaultsToDefaultRadius() {
+        XCTAssertEqual(Settings.shared.mouseSpotlightRadius, MouseSpotlightGeometry.defaultRadius)
+    }
+
+    func testMouseSpotlightRadiusRoundTrip() {
+        Settings.shared.mouseSpotlightRadius = 250
+        XCTAssertEqual(Settings.shared.mouseSpotlightRadius, 250)
+    }
+
+    func testMouseSpotlightRadiusClampsStoredOutOfRangeValuesOnRead() {
+        UserDefaults.standard.set(10_000.0, forKey: "mouseSpotlightRadius")
+        XCTAssertEqual(Settings.shared.mouseSpotlightRadius, MouseSpotlightGeometry.maxRadius)
+        UserDefaults.standard.set(1.0, forKey: "mouseSpotlightRadius")
+        XCTAssertEqual(Settings.shared.mouseSpotlightRadius, MouseSpotlightGeometry.minRadius)
+    }
+
+    func testMouseSpotlightRadiusClampsOnWrite() {
+        Settings.shared.mouseSpotlightRadius = 9999
+        XCTAssertEqual(
+            UserDefaults.standard.double(forKey: "mouseSpotlightRadius"),
+            Double(MouseSpotlightGeometry.maxRadius))
+    }
+
+    func testResetClearsMouseSpotlightRadius() {
+        Settings.shared.mouseSpotlightRadius = 300
+        Settings.shared.resetToDefaults()
+        XCTAssertEqual(Settings.shared.mouseSpotlightRadius, MouseSpotlightGeometry.defaultRadius)
+    }
+
     // MARK: - Reset
 
     func testResetToDefaults() {

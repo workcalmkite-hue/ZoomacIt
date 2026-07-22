@@ -95,6 +95,9 @@ final class Settings: @unchecked Sendable {
         static let breakTimerWidgetPositionX = "breakTimerWidgetPositionX"
         static let breakTimerWidgetPositionY = "breakTimerWidgetPositionY"
         static let breakTimerWidgetDiameter = "breakTimerWidgetDiameter"
+
+        // Mouse Spotlight
+        static let mouseSpotlightRadius = "mouseSpotlightRadius"
     }
 
     // MARK: - Register Defaults
@@ -319,6 +322,25 @@ final class Settings: @unchecked Sendable {
         }
     }
 
+    // MARK: - Mouse Spotlight
+
+    /// User-chosen spotlight hole radius (scroll-to-resize). Clamped on both read and
+    /// write so a stale or hand-edited defaults value can't produce a broken spotlight.
+    var mouseSpotlightRadius: CGFloat {
+        get {
+            guard let stored = defaults.object(forKey: Keys.mouseSpotlightRadius) as? Double else {
+                return MouseSpotlightGeometry.defaultRadius
+            }
+            return MouseSpotlightGeometry.clampedRadius(CGFloat(stored))
+        }
+        set {
+            defaults.set(
+                Double(MouseSpotlightGeometry.clampedRadius(newValue)),
+                forKey: Keys.mouseSpotlightRadius
+            )
+        }
+    }
+
     // MARK: - Reset
 
     func resetToDefaults() {
@@ -337,7 +359,8 @@ final class Settings: @unchecked Sendable {
             Keys.breakTimerShowElapsed, Keys.breakTimerPlaySound,
             Keys.breakTimerSoundFile,
             Keys.breakTimerWidgetPositionX, Keys.breakTimerWidgetPositionY,
-            Keys.breakTimerWidgetDiameter
+            Keys.breakTimerWidgetDiameter,
+            Keys.mouseSpotlightRadius
         ]
         for key in allKeys {
             defaults.removeObject(forKey: key)
