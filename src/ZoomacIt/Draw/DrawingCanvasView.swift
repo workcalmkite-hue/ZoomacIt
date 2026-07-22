@@ -51,6 +51,14 @@ final class DrawingCanvasView: NSView {
     private var freehandPoints: [CGPoint] = []
     private var isDragging: Bool = false
 
+    /// The shape type for the current gesture, locked in from the modifier
+    /// keys held at `mouseDown`. Deliberately NOT recomputed on every
+    /// `mouseDragged`/`mouseUp` — if a modifier (e.g. Shift for `.line`) is
+    /// released mid-drag, the tool must not flip to `.freehand`, since
+    /// `freehandPoints` only ever contains `dragOrigin` in that case and the
+    /// resulting curve snaps back to the drag's start point.
+    private var activeShapeType: ShapeType = .freehand
+
     // MARK: - Vanishing Pen
 
     /// Strokes drawn while `drawingState.isVanishingPenEnabled` is true.
@@ -418,6 +426,9 @@ final class DrawingCanvasView: NSView {
             return
         }
 
+        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        activeShapeType = drawingState.currentShapeType(modifiers: modifiers)
+
         freehandPoints = [point]
         isDragging = true
 
@@ -442,10 +453,7 @@ final class DrawingCanvasView: NSView {
             return
         }
 
-        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        let shapeType = drawingState.currentShapeType(modifiers: modifiers)
-
-        switch shapeType {
+        switch activeShapeType {
         case .freehand:
             freehandPoints.append(currentPoint)
             activeFreehand = FreehandRenderer.smoothedPath(from: freehandPoints)
@@ -498,11 +506,9 @@ final class DrawingCanvasView: NSView {
         }
 
         let currentPoint = convert(event.locationInWindow, from: nil)
-        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        let shapeType = drawingState.currentShapeType(modifiers: modifiers)
 
         if drawingState.isVanishingPenEnabled {
-            vanishingStrokes.append(makeVanishingStroke(shapeType: shapeType, endPoint: currentPoint))
+            vanishingStrokes.append(makeVanishingStroke(shapeType: activeShapeType, endPoint: currentPoint))
             startVanishingTimerIfNeeded()
         } else {
             // Push current state for undo
@@ -514,7 +520,7 @@ final class DrawingCanvasView: NSView {
 
             // Composite the completed stroke onto finishedLayer
             finishedLayer = compositeStrokeOntoFinished(
-                shapeType: shapeType,
+                shapeType: activeShapeType,
                 endPoint: currentPoint
             )
         }
