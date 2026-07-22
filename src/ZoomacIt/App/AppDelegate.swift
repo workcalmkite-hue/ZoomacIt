@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var zoomController: StillZoomWindowController?
     private var liveZoomController: LiveZoomWindowController?
     private var breakTimerController: BreakTimerWindowController?
+    private var mouseSpotlightController: MouseSpotlightWindowController?
     private let stickyNoteManager = StickyNoteManager()
     /// Stores the full-resolution source image when transitioning from Zoom → Draw,
     /// so that Escape from Draw can return to Zoom mode.
@@ -38,6 +39,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         hotkeyManager.onMemoHotkey = { [weak self] in
             self?.spawnStickyNote()
+        }
+        hotkeyManager.onMouseSpotlightHotkey = { [weak self] in
+            self?.toggleMouseSpotlight()
         }
         hotkeyManager.start()
     }
@@ -217,6 +221,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Spawn a movable always-on-top sticky note (Draw mode, M key).
     func spawnStickyNote() {
         stickyNoteManager.spawnNote()
+    }
+
+    // MARK: - Mouse Spotlight
+
+    private func toggleMouseSpotlight() {
+        if let controller = mouseSpotlightController {
+            controller.dismiss()
+            mouseSpotlightController = nil
+        } else {
+            let controller = MouseSpotlightWindowController()
+            controller.showSpotlight()
+            mouseSpotlightController = controller
+        }
     }
 
     // MARK: - Preferences
