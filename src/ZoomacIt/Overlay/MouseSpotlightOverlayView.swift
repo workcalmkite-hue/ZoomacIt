@@ -64,7 +64,7 @@ final class MouseSpotlightOverlayView: NSView {
         )
         ring.fillColor = NSColor.clear.cgColor
         ring.strokeColor = Self.rippleColor.cgColor
-        ring.lineWidth = 3
+        ring.lineWidth = 6
         layer?.addSublayer(ring)
 
         let pathAnimation = CABasicAnimation(keyPath: "path")
@@ -78,7 +78,7 @@ final class MouseSpotlightOverlayView: NSView {
 
         let group = CAAnimationGroup()
         group.animations = [pathAnimation, opacityAnimation]
-        group.duration = 0.4
+        group.duration = 0.8
         group.timingFunction = CAMediaTimingFunction(name: .easeOut)
         group.fillMode = .forwards
         group.isRemovedOnCompletion = false
