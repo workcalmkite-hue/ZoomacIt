@@ -14,6 +14,11 @@ final class MouseSpotlightOverlayView: NSView {
     /// (no Settings slider yet).
     private static let dimAlpha: CGFloat = 0.5
 
+    /// Click-ripple stroke color. Translucent red reads clearly against both
+    /// dark and light backgrounds (a solid white ring nearly disappeared on
+    /// the light-background pages most browsing happens on).
+    private static let rippleColor = NSColor.systemRed.withAlphaComponent(0.75)
+
     private let dimLayer = CALayer()
     private let holeMask = CAShapeLayer()
 
@@ -58,7 +63,7 @@ final class MouseSpotlightOverlayView: NSView {
             transform: nil
         )
         ring.fillColor = NSColor.clear.cgColor
-        ring.strokeColor = NSColor.white.cgColor
+        ring.strokeColor = Self.rippleColor.cgColor
         ring.lineWidth = 3
         layer?.addSublayer(ring)
 
