@@ -10,6 +10,7 @@ final class MouseSpotlightWindowController {
     private var overlayWindow: OverlayWindow?
     private var overlayView: MouseSpotlightOverlayView?
     private var currentScreen: NSScreen?
+    private var currentDisplayID: CGDirectDisplayID?
     private var followTimer: Timer?
     private var mouseDownMonitor: Any?
     private var scrollMonitor: Any?
@@ -53,6 +54,7 @@ final class MouseSpotlightWindowController {
         overlayWindow = nil
         overlayView = nil
         currentScreen = nil
+        currentDisplayID = nil
     }
 
     // MARK: - Private — window presentation
@@ -68,7 +70,20 @@ final class MouseSpotlightWindowController {
         overlayWindow = window
         overlayView = view
         currentScreen = screen
+        currentDisplayID = displayID(for: screen)
         updateHole(on: screen)
+    }
+
+    /// Extracts the stable physical-display identifier for a screen. `NSScreen`
+    /// instances are not stable across display reconfiguration (sleep/wake,
+    /// monitor plug/unplug, resolution changes) — AppKit can hand back a fresh
+    /// `NSScreen` object for the same physical display — so identity
+    /// comparisons (`===`) on `NSScreen` are unreliable. `CGDirectDisplayID`
+    /// stays stable for the same physical display, matching the idiom used
+    /// elsewhere in this codebase (StillZoomWindowController, LiveZoomWindowController,
+    /// DrawingCanvasView).
+    private func displayID(for screen: NSScreen) -> CGDirectDisplayID? {
+        screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID
     }
 
     private func updateHole(on screen: NSScreen) {
@@ -95,7 +110,16 @@ final class MouseSpotlightWindowController {
     /// different screen if the cursor has crossed onto one.
     private func tick() {
         guard let targetScreen = NSScreen.screenContainingMouse else { return }
-        if targetScreen !== currentScreen {
+        let targetDisplayID = displayID(for: targetScreen)
+        let screenChanged: Bool
+        if let targetDisplayID, let currentDisplayID {
+            screenChanged = targetDisplayID != currentDisplayID
+        } else {
+            // Either side couldn't resolve a display ID — fail safe and treat
+            // it as a screen change so the overlay still hands off cleanly.
+            screenChanged = true
+        }
+        if screenChanged {
             overlayWindow?.orderOut(nil)
             overlayWindow?.close()
             presentOverlay(on: targetScreen)
