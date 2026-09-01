@@ -1,0 +1,7 @@
+# 빌드 산출물 (배포 exe는 GitHub Releases로 올린다)
+bin/
+obj/
+dist/ZoomacIt for Windows/
+*.user
+*.suo
+.vs/
