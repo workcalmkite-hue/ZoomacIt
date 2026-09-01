@@ -31,3 +31,5 @@ docs/.vitepress/cache/
 docs/node_modules/
 
 .superpowers/
+**/*.xcodeproj/xcuserdata/
+**/*.xcworkspace/xcuserdata/

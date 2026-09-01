@@ -25,12 +25,16 @@ final class HotkeyManager: @unchecked Sendable {
     /// Called when the Mouse Spotlight hotkey (⌘1) is triggered.
     var onMouseSpotlightHotkey: (() -> Void)?
 
+    /// Called when the Text hotkey (⌃T) is triggered.
+    var onTextHotkey: (() -> Void)?
+
     private var hotKeyRef: EventHotKeyRef?
     private var zoomHotKeyRef: EventHotKeyRef?
     private var breakHotKeyRef: EventHotKeyRef?
     private var liveZoomHotKeyRef: EventHotKeyRef?
     private var memoHotKeyRef: EventHotKeyRef?
     private var mouseSpotlightHotKeyRef: EventHotKeyRef?
+    private var textHotKeyRef: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
 
     /// Signature used to identify our hot-key events ('ZmIt')
@@ -41,6 +45,7 @@ final class HotkeyManager: @unchecked Sendable {
     private let liveZoomHotKeyID: UInt32 = 3
     private let memoHotKeyID: UInt32 = 4
     private let mouseSpotlightHotKeyID: UInt32 = 5
+    private let textHotKeyID: UInt32 = 6
 
     private init() {}
 
@@ -194,6 +199,26 @@ final class HotkeyManager: @unchecked Sendable {
 
         NSLog("[HotkeyManager] Mouse Spotlight hotkey registered: %@",
               Settings.hotkeyDisplayString(keyCode: UInt32(kVK_ANSI_1), modifiers: UInt32(cmdKey)))
+
+        // Register Text hotkey (⌃T) — fixed in code, not user-remappable in v1.
+        // Enters Draw mode straight into text entry, skipping ⌃2 then T.
+        let textKeyID = EventHotKeyID(signature: hotKeySignature, id: textHotKeyID)
+        let textStatus = RegisterEventHotKey(
+            UInt32(kVK_ANSI_T),
+            UInt32(controlKey),
+            textKeyID,
+            GetApplicationEventTarget(),
+            0,
+            &textHotKeyRef
+        )
+
+        guard textStatus == noErr else {
+            NSLog("[HotkeyManager] Failed to register text hotkey: %d", textStatus)
+            return
+        }
+
+        NSLog("[HotkeyManager] Text hotkey registered: %@",
+              Settings.hotkeyDisplayString(keyCode: UInt32(kVK_ANSI_T), modifiers: UInt32(controlKey)))
     }
 
     func stop() {
@@ -220,6 +245,10 @@ final class HotkeyManager: @unchecked Sendable {
         if let ref = mouseSpotlightHotKeyRef {
             UnregisterEventHotKey(ref)
             mouseSpotlightHotKeyRef = nil
+        }
+        if let ref = textHotKeyRef {
+            UnregisterEventHotKey(ref)
+            textHotKeyRef = nil
         }
         if let handler = eventHandlerRef {
             RemoveEventHandler(handler)
@@ -275,6 +304,10 @@ final class HotkeyManager: @unchecked Sendable {
         } else if hotKeyID.id == mouseSpotlightHotKeyID {
             DispatchQueue.main.async { [weak self] in
                 self?.onMouseSpotlightHotkey?()
+            }
+        } else if hotKeyID.id == textHotKeyID {
+            DispatchQueue.main.async { [weak self] in
+                self?.onTextHotkey?()
             }
         }
     }

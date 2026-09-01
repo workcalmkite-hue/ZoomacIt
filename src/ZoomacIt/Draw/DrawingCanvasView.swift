@@ -408,6 +408,23 @@ final class DrawingCanvasView: NSView {
     // MARK: - Mouse Events
 
     override func mouseDown(with event: NSEvent) {
+        // Double-clicking a piece of text deletes it, in pen mode too — the
+        // inert boxes let clicks through, so the canvas resolves the hit here.
+        if event.clickCount >= 2,
+           let box = textInputController?.box(at: convert(event.locationInWindow, from: nil)) {
+            isDragging = false
+            activeFreehand = nil
+            freehandPoints.removeAll()
+            textInputController?.delete(box)
+            // Drop the dot the first click of the double-click left behind —
+            // but only when that click actually pushed one, or the undo would
+            // eat an earlier stroke instead.
+            if drawingState.activeTool == .draw && !drawingState.isVanishingPenEnabled {
+                performUndo()
+            }
+            return
+        }
+
         if drawingState.isTextMode {
             // In text mode, clicks position the text field
             handleTextModeClick(event)
@@ -543,9 +560,12 @@ final class DrawingCanvasView: NSView {
     }
 
     override func rightMouseDown(with event: NSEvent) {
-        // If in text mode, commit current text first
+        // In text mode right-click wipes all the text boxes and stays put —
+        // the counterpart to double-clicking one box to delete it.
         if drawingState.isTextMode {
-            commitCurrentText()
+            textInputController?.deleteAll()
+            setNeedsDisplay(bounds)
+            return
         }
         // Right-click exits draw mode
         onDismiss?()
@@ -573,7 +593,7 @@ final class DrawingCanvasView: NSView {
         // Exit draw mode
         case "\u{1B}": // Escape
             if drawingState.isTextMode {
-                commitText()
+                exitTextMode()
             } else {
                 onDismiss?()
             }
@@ -604,6 +624,8 @@ final class DrawingCanvasView: NSView {
             vanishingStrokes.removeAll()
             vanishingTimer?.invalidate()
             vanishingTimer = nil
+            // Clearing means clearing — the live text boxes go too.
+            textInputController?.deleteAll()
             setNeedsDisplay(bounds)
 
         // Whiteboard
@@ -652,8 +674,10 @@ final class DrawingCanvasView: NSView {
             let screenCenter = window?.convertPoint(toScreen: convert(center, to: nil)) ?? center
             CGWarpMouseCursorPosition(screenCenter)
 
-        // Undo (⌘Z is handled here since we're key)
-        case "Z" where modifiers.contains(.command):
+        // Undo (⌘Z is handled here since we're key).
+        // ⌃Z does the same so it stays reachable while typing, where the text
+        // view keeps ⌘Z for its own edit history.
+        case "Z" where modifiers.contains(.command) || modifiers.contains(.control):
             performUndo()
 
         // Copy to clipboard (⌘C)
@@ -748,9 +772,10 @@ final class DrawingCanvasView: NSView {
     // MARK: - Scroll Wheel (Pen Size)
 
     override func scrollWheel(with event: NSEvent) {
-        if drawingState.isTextMode {
-            // In text mode, scroll wheel changes font size
-            textInputController?.adjustFontSize(delta: event.scrollingDeltaY)
+        // In text mode the wheel resizes the focused box; with no box focused
+        // it falls through to pen width.
+        if drawingState.isTextMode,
+           textInputController?.adjustFontSize(delta: event.scrollingDeltaY) == true {
             return
         }
 
@@ -874,40 +899,53 @@ final class DrawingCanvasView: NSView {
 
     // MARK: - Text Mode
 
+    /// Whether the canvas is currently taking text input.
+    var isTextModeActive: Bool { drawingState.isTextMode }
+
+    /// Toggle text mode from outside the canvas (⌃T global hotkey).
+    /// Entering also drops a text box at the cursor so the user can type
+    /// immediately; leaving keeps every box on screen but makes them inert,
+    /// so the pen draws over them.
+    func toggleTextMode(at screenPoint: CGPoint?) {
+        if drawingState.isTextMode {
+            exitTextMode()
+            return
+        }
+
+        enterTextMode()
+
+        guard let screenPoint, let window else { return }
+        let point = convert(window.convertPoint(fromScreen: screenPoint), from: nil)
+        guard bounds.contains(point) else { return }
+        textInputController?.placeTextField(at: point)
+    }
+
     private func enterTextMode() {
         drawingState.isTextMode = true
-        let controller = TextInputController(canvasView: self, drawingState: drawingState)
-        controller.onCommit = { [weak self] in
-            self?.commitText()
+        // The controller owns the live text boxes for the whole Draw session,
+        // so it is created once and reused every time text mode is re-entered.
+        if textInputController == nil {
+            let controller = TextInputController(canvasView: self, drawingState: drawingState)
+            controller.onCommit = { [weak self] in
+                self?.exitTextMode()
+            }
+            textInputController = controller
         }
-        textInputController = controller
+        textInputController?.setInteractive(true)
+        setNeedsDisplay(bounds)
     }
 
     private func handleTextModeClick(_ event: NSEvent) {
-        // Commit any existing text before placing a new text field
-        commitCurrentText()
+        // Clicks on empty canvas start another box; clicks on an existing box
+        // never reach here (the box handles focus, drag and double-click).
         let point = convert(event.locationInWindow, from: nil)
         textInputController?.placeTextField(at: point)
     }
 
-    /// Rasterize current text into finishedLayer without leaving text mode.
-    private func commitCurrentText() {
-        guard let controller = textInputController, controller.hasText else { return }
-        strokeManager.pushUndoSnapshot(
-            finishedLayer,
-            backgroundMode: drawingState.backgroundMode,
-            spotlightRect: drawingState.spotlightRect
-        )
-        finishedLayer = controller.rasterizeAndComposite(onto: finishedLayer, canvasSize: bounds.size)
-        controller.cleanup()
-        setNeedsDisplay(bounds)
-    }
-
-    /// Commit current text and exit text mode (return to pen mode).
-    private func commitText() {
-        commitCurrentText()
-        textInputController?.cleanup()
-        textInputController = nil
+    /// Leave text mode. The text stays on screen as inert boxes so the user can
+    /// draw over it, and re-entering text mode makes it editable again.
+    private func exitTextMode() {
+        textInputController?.setInteractive(false)
         drawingState.isTextMode = false
         setNeedsDisplay(bounds)
     }
@@ -1007,7 +1045,15 @@ final class DrawingCanvasView: NSView {
             }
         }
 
-        return context.makeImage()
+        let exported = context.makeImage()
+
+        // Text boxes are live views, so they are not in any layer — flatten
+        // them into the export at the position they are shown.
+        if let controller = textInputController, controller.hasText {
+            return controller.rasterize(onto: exported, canvasSize: size)
+        }
+
+        return exported
     }
 
     // MARK: - On-Demand Desktop Capture

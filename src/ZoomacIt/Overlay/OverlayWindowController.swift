@@ -32,6 +32,17 @@ final class OverlayWindowController {
         self.presentOverlay(screen: screen, backgroundImage: nil)
     }
 
+    /// Toggle text entry on the live canvas (⌃T). Entering places the text box
+    /// at the current cursor position.
+    func toggleTextMode() {
+        canvasView?.toggleTextMode(at: NSEvent.mouseLocation)
+    }
+
+    /// Whether the canvas is currently taking text input.
+    var isTextModeActive: Bool {
+        canvasView?.isTextModeActive ?? false
+    }
+
     private func presentOverlay(screen: NSScreen, backgroundImage: CGImage?) {
         let window = OverlayWindow(for: screen)
         let canvas = DrawingCanvasView(

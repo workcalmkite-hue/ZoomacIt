@@ -43,6 +43,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotkeyManager.onMouseSpotlightHotkey = { [weak self] in
             self?.toggleMouseSpotlight()
         }
+        hotkeyManager.onTextHotkey = { [weak self] in
+            self?.toggleTextMode()
+        }
         hotkeyManager.start()
     }
 
@@ -68,6 +71,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         if let controller = overlayController {
+            // While typing, ⌃2 means "back to the pen", not "throw everything
+            // away" — dismissing here would wipe the text the user just wrote.
+            if controller.isTextModeActive {
+                controller.toggleTextMode()
+                return
+            }
             zoomSourceForDrawReturn = nil  // ⌃2 toggle = full exit, don't return to zoom
             controller.dismiss()
             overlayController = nil
@@ -80,6 +89,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let controller = OverlayWindowController(backgroundImageOverride: backgroundImage)
         controller.showOverlay()
         overlayController = controller
+    }
+
+    // MARK: - Text Mode
+
+    /// ⌃T — jump straight to typing. Opens Draw mode first when it isn't up yet,
+    /// and pressing it again leaves text mode with the typed text kept on screen.
+    private func toggleTextMode() {
+        if let controller = overlayController {
+            controller.toggleTextMode()
+            return
+        }
+
+        presentDrawMode(backgroundImage: nil)
+        overlayController?.toggleTextMode()
     }
 
     /// Called from OverlayWindowController when the user exits draw mode (Escape / right-click)
