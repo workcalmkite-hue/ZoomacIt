@@ -72,7 +72,7 @@ internal sealed class BreakTimerWindow : Window
         _ring.MouseMove += OnDragMove;
         _ring.MouseLeftButtonUp += OnDragEnd;
         PreviewMouseWheel += OnWheel;
-        MouseEnter += (_, _) => SetControlsHidden(false);
+        MouseEnter += (_, _) => SetControlsDimmed(false);
         MouseLeave += (_, _) => UpdateControlsVisibility();
 
         SourceInitialized += (_, _) =>
@@ -86,7 +86,7 @@ internal sealed class BreakTimerWindow : Window
         Loaded += (_, _) =>
         {
             // 멈춘 상태로 시작하므로 재생 버튼은 호버 없이도 보여야 한다.
-            SetControlsHidden(false);
+            SetControlsDimmed(false);
             StartSecondTimer();
         };
     }
@@ -169,21 +169,19 @@ internal sealed class BreakTimerWindow : Window
     }
 
     /// <summary>
-    /// 컨트롤 표시. 타이머가 도는 동안에는 시간 조정/재생 버튼을 감추지만
-    /// 닫기 버튼만은 항상 남긴다 — 수업 중에 위젯을 끄려고 헤매는 일은 없어야 한다.
+    /// 컨트롤 표시. 버튼은 절대 사라지지 않는다 — 타이머가 도는 중에도 멈추거나
+    /// 시간을 조정하려면 눌러야 하므로, 안 보이면 위젯을 더듬는 수밖에 없다.
+    /// 대신 도는 동안에는 옅게(0.55) 두고 호버하면 또렷해진다.
     /// </summary>
-    private void SetControlsHidden(bool hidden)
+    private void SetControlsDimmed(bool dimmed)
     {
-        foreach (var b in new[] { _minus, _playPause, _plus })
-            b.Opacity = hidden ? 0 : 1;
-
-        // 평소엔 옅게 두고 호버하면 또렷해진다 — 언제든 누를 수 있다는 표시다.
-        _close.Opacity = hidden ? 0.55 : 1;
+        foreach (var b in _controls.Children.OfType<RoundIconButton>())
+            b.Opacity = dimmed ? 0.55 : 1;
     }
 
-    /// <summary>지금 상태에 맞게 컨트롤을 다시 계산한다. 멈춰 있거나 만료된 뒤는 계속 보여준다.</summary>
+    /// <summary>지금 상태에 맞는 컨트롤 밝기로 되돌린다. 멈춰 있거나 만료된 뒤는 항상 또렷하게.</summary>
     private void UpdateControlsVisibility()
-        => SetControlsHidden(!IsMouseOver && !_state.IsPaused && !_state.IsExpired);
+        => SetControlsDimmed(!IsMouseOver && !_state.IsPaused && !_state.IsExpired);
 
     private void SavePosition()
     {
