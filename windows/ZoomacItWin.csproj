@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <Company>ZoomacIt</Company>
+    <Product>ZoomacIt for Windows</Product>
+    <!-- 단일 파일 배포 시 압축해서 용량을 줄인다 (첫 실행이 아주 살짝 느려짐) -->
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <!-- WPF 네이티브 DLL까지 exe 안에 넣어 진짜 파일 하나로 만든다 -->
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <DebugType>none</DebugType>
+    <AssemblyName>ZoomacItWin</AssemblyName>
+    <RootNamespace>ZoomacItWin</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <AssemblyTitle>ZoomacIt for Windows</AssemblyTitle>
+    <Version>1.0.0</Version>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <!-- DPI 인식은 app.manifest(PerMonitorV2)로 지정한다. WinForms는 트레이 아이콘에만
+         쓰이므로 프로젝트 속성 대신 매니페스트를 쓰라는 WFAC010 경고는 무시한다. -->
+    <NoWarn>WFAC010</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- WinForms SDK가 자동으로 넣는 전역 using 두 개를 뺀다. WPF(System.Windows.*)와
+         Point/Size/Color/Brush 이름이 전부 충돌하기 때문 — WinForms는 트레이 아이콘과
+         Screen 열거에만 쓰므로 필요한 파일에서만 명시적으로 가져온다. -->
+    <Using Remove="System.Drawing" />
+    <Using Remove="System.Windows.Forms" />
+  </ItemGroup>
+
+</Project>
