@@ -20,7 +20,7 @@
     <RootNamespace>ZoomacItWin</RootNamespace>
     <LangVersion>latest</LangVersion>
     <AssemblyTitle>ZoomacIt for Windows</AssemblyTitle>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <!-- DPI 인식은 app.manifest(PerMonitorV2)로 지정한다. WinForms는 트레이 아이콘에만
          쓰이므로 프로젝트 속성 대신 매니페스트를 쓰라는 WFAC010 경고는 무시한다. -->
