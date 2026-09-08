@@ -24,6 +24,9 @@ public partial class App : Application
     private StillZoomWindow? _stillZoom;
     private LiveZoomWindow? _liveZoom;
     private SnipWindow? _snip;
+
+    /// <summary>화면 캡처 동안만 잠시 숨겨 둔 오버레이들 — 캡처가 끝나면 그대로 되돌린다.</summary>
+    private readonly List<Window> _hiddenForSnip = new();
     private readonly MouseSpotlightController _spotlight = new();
     private readonly StickyNoteManager _stickyNotes = new();
 
@@ -60,6 +63,16 @@ public partial class App : Application
                 ? e.Args[1]
                 : Path.Combine(Environment.CurrentDirectory, "capture_livezoom.png");
             RenderTest.CaptureLiveZoom(outFile, Shutdown);
+            return;
+        }
+
+        // 판서를 띄운 채 GDI 화면 캡처를 해서 판서가 캡처에 들어오는지 확인하는 진단 모드.
+        if (e.Args.Length > 0 && e.Args[0] == "--snip-test")
+        {
+            string outFile = e.Args.Length > 1
+                ? e.Args[1]
+                : Path.Combine(Environment.CurrentDirectory, "snip_test.png");
+            RenderTest.SnipTest(outFile, Shutdown);
             return;
         }
 
@@ -130,7 +143,10 @@ public partial class App : Application
             return;
         }
 
-        CloseFullScreenModes();
+        // 다른 전체화면 모드를 닫지 않는다. 그리기 오버레이를 닫아 버리면 애써 판서한
+        // 것이 사라진 뒤에 찍혀서, 정작 찍고 싶었던 화면이 안 나온다.
+        // 대신 지금 화면 그대로 한 장 찍은 다음(SnipWindow 생성자) 잠깐 숨겼다가,
+        // 캡처가 끝나면 그리던 상태 그대로 되돌린다.
         var snip = new SnipWindow();
         snip.Finished += savedPath =>
         {
@@ -139,9 +155,49 @@ public partial class App : Application
             _tray.BalloonTipText = $"클립보드에 복사했고 파일로도 저장했습니다.\n{savedPath}";
             _tray.ShowBalloonTip(3000);
         };
-        snip.Closed += (_, _) => _snip = null;
+        snip.Closed += (_, _) =>
+        {
+            _snip = null;
+            RestoreAfterSnip();
+        };
         _snip = snip;
         snip.Show();
+
+        // 스닙 창을 띄운 "뒤에" 숨긴다 — 먼저 숨기면 그 찰나에 바탕화면이 번쩍인다.
+        HideDuringSnip();
+    }
+
+    /// <summary>
+    /// 캡처 화면과 겹치는 오버레이를 잠시 숨긴다. 닫는 것이 아니라 숨기는 것이므로
+    /// 그려 둔 획과 확대 상태가 그대로 남는다.
+    /// </summary>
+    private void HideDuringSnip()
+    {
+        foreach (var window in new Window?[] { _drawOverlay, _stillZoom, _liveZoom })
+        {
+            if (window is null || !window.IsVisible) continue;
+
+            window.Visibility = Visibility.Hidden;
+            _hiddenForSnip.Add(window);
+
+            // 캡처 도중 닫힌 창을 되살리려 하면 예외가 난다.
+            window.Closed += (_, _) => _hiddenForSnip.Remove(window);
+        }
+    }
+
+    /// <summary>숨겨 뒀던 오버레이를 되돌리고 키보드 포커스까지 돌려준다.</summary>
+    private void RestoreAfterSnip()
+    {
+        // 되살리는 중에 닫히는 창이 있어도 열거가 깨지지 않도록 복사본을 돈다.
+        foreach (var window in _hiddenForSnip.ToArray())
+        {
+            window.Visibility = Visibility.Visible;
+            window.Topmost = true;
+            window.Activate();
+            System.Windows.Input.Keyboard.Focus(window);
+        }
+
+        _hiddenForSnip.Clear();
     }
 
     private void ToggleLiveZoom()
@@ -282,7 +338,8 @@ public partial class App : Application
 
              [브레이크 타이머 위젯]
              드래그 — 이동            휠 — 크기 조절
-             마우스를 올리면 −, 재생, ＋, × 버튼이 나타남
+             −, 재생, ＋, × 버튼은 늘 보임 (도는 동안 옅게, 올리면 또렷)
+             멈췄거나 시간이 다 된 뒤에는 올리지 않아도 또렷
 
              [메모]
              Ctrl+휠 — 글자 크기      Ctrl + / − / 0 — 글자 크기 조절/초기화

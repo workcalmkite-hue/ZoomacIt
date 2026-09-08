@@ -74,6 +74,111 @@ internal static class RenderTest
         CaptureWindowAfterDelay(window, outFile, onFinished, TimeSpan.FromSeconds(1.5));
     }
 
+    /// <summary>
+    /// 드로잉 오버레이를 띄운 채로 GDI 화면 캡처를 해서, 판서가 캡처에 들어오는지
+    /// 확인한다. Ctrl+4(화면 캡처)가 판서를 지워 버리던 문제를 고치면서,
+    /// "오버레이를 닫지 않기만 하면 되는지"를 눈이 아니라 픽셀로 확인하려고 만들었다.
+    /// 레이어드 창은 GDI 캡처에서 빠진다는 통념이 요즘 윈도우에서는 맞지 않기 때문.
+    /// </summary>
+    public static void SnipTest(string outFile, Action onFinished)
+    {
+        var window = new DrawOverlayWindow(startVanishing: false);
+        window.Show();
+
+        var marker = PenColor.Green.ToColor();
+
+        var timer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(1.2)
+        };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            try
+            {
+                // 화면 가운데를 가로지르는 굵은 초록 선 하나.
+                double y = window.ActualHeight / 2;
+                var points = new List<Point>();
+                for (double x = 100; x <= window.ActualWidth - 100; x += 10)
+                    points.Add(new Point(x, y));
+
+                window.AddStrokeForDiagnostics(new Stroke
+                {
+                    Points = points,
+                    Start = points[0],
+                    End = points[^1],
+                    Color = marker,
+                    LineWidth = 20,
+                    ShapeType = ShapeType.Freehand,
+                    CreatedAt = 0
+                });
+
+                // 획이 실제로 화면에 올라간 뒤에 찍어야 한다.
+                var shoot = new System.Windows.Threading.DispatcherTimer
+                {
+                    Interval = TimeSpan.FromSeconds(0.6)
+                };
+                shoot.Tick += (_, _) =>
+                {
+                    shoot.Stop();
+                    try
+                    {
+                        var boundsPx = ScreenHelper.ScreenContainingMouse().BoundsPx();
+                        var shot = ScreenCapture.CaptureRegion(boundsPx);
+                        int hits = CountPixelsNear(shot, marker);
+
+                        Log.Write($"스닙 진단: 캡처 {shot.PixelWidth}x{shot.PixelHeight}, " +
+                                  $"판서 색 픽셀 {hits}개 → " +
+                                  (hits > 500 ? "GDI 캡처에 판서가 들어온다" : "판서가 캡처에서 빠진다"));
+                        Console.WriteLine($"SNIPTEST hits={hits}");
+
+                        var encoder = new PngBitmapEncoder();
+                        encoder.Frames.Add(BitmapFrame.Create(shot));
+                        using (var stream = File.Create(outFile))
+                            encoder.Save(stream);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Write($"스닙 진단 실패: {ex}");
+                    }
+
+                    window.Close();
+                    onFinished();
+                };
+                shoot.Start();
+            }
+            catch (Exception ex)
+            {
+                Log.Write($"스닙 진단 실패: {ex}");
+                window.Close();
+                onFinished();
+            }
+        };
+        timer.Start();
+    }
+
+    /// <summary>비트맵에서 지정한 색과 거의 같은 픽셀 수.</summary>
+    private static int CountPixelsNear(BitmapSource source, System.Windows.Media.Color color)
+    {
+        var converted = new FormatConvertedBitmap(source, PixelFormats.Bgra32, null, 0);
+        int stride = converted.PixelWidth * 4;
+        var pixels = new byte[stride * converted.PixelHeight];
+        converted.CopyPixels(pixels, stride, 0);
+
+        int hits = 0;
+        for (int i = 0; i < pixels.Length; i += 4)
+        {
+            if (Math.Abs(pixels[i] - color.B) <= 12 &&
+                Math.Abs(pixels[i + 1] - color.G) <= 12 &&
+                Math.Abs(pixels[i + 2] - color.R) <= 12)
+            {
+                hits++;
+            }
+        }
+
+        return hits;
+    }
+
     private static void CaptureWindowAfterDelay(Window window, string outFile,
         Action onFinished, TimeSpan delay)
     {

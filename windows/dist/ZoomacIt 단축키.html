@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>ZoomacIt for Windows — 단축키</title>
+<style>
+  :root{
+    --ink:#1b1d20;        /* 본문 */
+    --ink-soft:#4a4f57;   /* 보조 설명 — 흰 바탕 대비 8.1:1 */
+    --line:#dcdfe4;
+    --paper:#ffffff;
+    --band:#f4f6f8;
+    --key-bg:#eef1f5;
+    --key-line:#c3c9d2;
+    --accent:#b32a12;     /* 작은 글씨용 진한 벽돌색 */
+    --accent-face:#f03c22; /* 면·굵은 제목 전용 */
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:28px 22px 44px;
+    background:var(--band); color:var(--ink);
+    font-family:"Pretendard","Malgun Gothic","맑은 고딕",system-ui,sans-serif;
+    font-size:15px; line-height:1.62;
+    word-break:keep-all; overflow-wrap:break-word;
+  }
+  .sheet{
+    max-width:860px; margin:0 auto; background:var(--paper);
+    border:1px solid var(--line); border-radius:14px;
+    padding:34px 36px 40px;
+    box-shadow:0 10px 30px rgba(20,24,32,.07);
+  }
+  header{border-bottom:3px solid var(--accent-face); padding-bottom:16px; margin-bottom:24px}
+  h1{margin:0 0 6px; font-size:27px; letter-spacing:-.4px}
+  h1 span{color:var(--accent); font-weight:800}
+  .lead{margin:0; color:var(--ink-soft); font-size:14.5px}
+  h2{
+    margin:30px 0 12px; font-size:18px; letter-spacing:-.2px;
+    display:flex; align-items:center; gap:10px;
+  }
+  h2::before{
+    content:""; width:7px; height:20px; border-radius:3px;
+    background:var(--accent-face); flex:none;
+  }
+  table{width:100%; border-collapse:collapse; margin:0 0 4px}
+  th,td{
+    text-align:left; padding:9px 10px; border-bottom:1px solid var(--line);
+    vertical-align:top;
+  }
+  th{
+    font-size:13px; color:var(--ink-soft); font-weight:700;
+    background:var(--band); border-bottom:1px solid var(--key-line);
+  }
+  td.k{width:34%; white-space:nowrap}
+  kbd{
+    display:inline-block; padding:2px 8px; margin:1px 0;
+    background:var(--key-bg); border:1px solid var(--key-line);
+    border-bottom-width:2px; border-radius:6px;
+    font-family:inherit; font-size:13.5px; font-weight:700; color:var(--ink);
+  }
+  .note{
+    margin:14px 0 0; padding:13px 16px; background:var(--band);
+    border-left:4px solid var(--accent-face); border-radius:0 8px 8px 0;
+    font-size:14px; color:var(--ink);
+  }
+  .note b{color:var(--accent)}
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:0 30px}
+  footer{
+    margin-top:34px; padding-top:16px; border-top:1px solid var(--line);
+    font-size:13px; color:var(--ink-soft);
+  }
+  @media (max-width:700px){ .grid{grid-template-columns:1fr} }
+  @media print{
+    body{background:#fff; padding:0; font-size:11.5pt}
+    .sheet{border:0; box-shadow:none; border-radius:0; padding:0; max-width:none}
+    h2{margin-top:18px}
+    td,th{padding:5px 8px}
+    .grid{gap:0 22px}
+    @page{size:A4 portrait; margin:14mm}
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+<header>
+  <h1>ZoomacIt <span>for Windows</span> — 단축키</h1>
+  <p class="lead">
+    교탁에 두고 보는 한 장.<br>
+    전부 <b>같은 키를 다시 누르면 꺼집니다.</b> <kbd>Esc</kbd>로도 닫힙니다.
+  </p>
+</header>
+
+<h2>어디서나 (전역 단축키)</h2>
+<table>
+  <tr><th>키</th><th>하는 일</th></tr>
+  <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>1</kbd></td><td>확대 — 화면을 <b>얼려서</b> 크게 봅니다</td></tr>
+  <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>2</kbd></td><td>그리기 (판서)</td></tr>
+  <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>3</kbd></td><td>브레이크 타이머 (원형 위젯)</td></tr>
+  <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>4</kbd></td><td>화면 캡처 — 드래그한 영역을 클립보드 + PNG 파일로</td></tr>
+  <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>8</kbd></td><td>확대 — 화면이 <b>계속 움직이는</b> 상태로</td></tr>
+  <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd></td><td>지워지는 펜 (그린 선이 3초 뒤 사라짐)</td></tr>
+  <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></td><td>마우스 스포트라이트 (커서 주변만 밝게)</td></tr>
+  <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>M</kbd></td><td>화면 위 메모 (노란 포스트잇)</td></tr>
+</table>
+<p class="note">
+  단축키가 안 먹으면 <b>다른 프로그램이 이미 쓰고 있는 것</b>입니다.<br>
+  <kbd>Ctrl</kbd>+<kbd>1</kbd>~<kbd>4</kbd>는 ZoomIt · PowerToys와 겹칩니다 — 둘 중 하나만 켜세요.<br>
+  그때도 <b>트레이 아이콘 오른쪽 클릭</b>으로는 모든 기능을 그대로 쓸 수 있습니다.
+</p>
+
+<h2>확대 화면 안에서 <span style="font-weight:400;font-size:14px;color:var(--ink-soft)">(Ctrl+1 / Ctrl+8)</span></h2>
+<table>
+  <tr><td class="k">마우스 이동</td><td>확대해서 볼 지점 옮기기</td></tr>
+  <tr><td class="k">휠 · <kbd>↑</kbd> <kbd>↓</kbd></td><td>배율 (1배 ~ 8배)</td></tr>
+  <tr><td class="k"><kbd>D</kbd></td><td>확대한 화면 위에 바로 그리기 <span style="color:var(--ink-soft)">(얼린 확대에서만)</span></td></tr>
+  <tr><td class="k"><kbd>Esc</kbd> · 오른쪽 클릭</td><td>닫기</td></tr>
+</table>
+
+<h2>그리기 중에 <span style="font-weight:400;font-size:14px;color:var(--ink-soft)">(Ctrl+2 / Ctrl+Shift+D)</span></h2>
+<div class="grid">
+  <table>
+    <tr><td class="k" style="width:44%">드래그</td><td>자유선</td></tr>
+    <tr><td class="k"><kbd>Shift</kbd>+드래그</td><td>직선</td></tr>
+    <tr><td class="k"><kbd>Ctrl</kbd>+드래그</td><td>사각형</td></tr>
+    <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+드래그</td><td>화살표</td></tr>
+    <tr><td class="k"><kbd>Tab</kbd>(누른 채)+드래그</td><td>타원</td></tr>
+    <tr><td class="k">휠</td><td>펜 굵기</td></tr>
+  </table>
+  <table>
+    <tr><td class="k" style="width:44%"><kbd>R</kbd><kbd>G</kbd><kbd>B</kbd><kbd>O</kbd><kbd>Y</kbd><kbd>P</kbd></td><td>빨강·초록·파랑·주황·노랑·분홍</td></tr>
+    <tr><td class="k"><kbd>H</kbd></td><td>형광펜</td></tr>
+    <tr><td class="k"><kbd>V</kbd></td><td>지워짐 ↔ 영구 전환</td></tr>
+    <tr><td class="k"><kbd>W</kbd> <kbd>K</kbd> <kbd>T</kbd></td><td>흰 배경 · 검은 배경 · 투명</td></tr>
+    <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>Z</kbd> · <kbd>E</kbd></td><td>실행취소 · 전부 지우기</td></tr>
+    <tr><td class="k"><kbd>Esc</kbd></td><td>닫기</td></tr>
+  </table>
+</div>
+<p class="note">
+  <b>판서해 둔 위에서 <kbd>Ctrl</kbd>+<kbd>4</kbd>를 눌러도 됩니다.</b><br>
+  그려 둔 그대로 찍히고, 캡처가 끝나면 그리던 화면으로 돌아옵니다 — 지워지지 않습니다.
+</p>
+
+<h2>브레이크 타이머</h2>
+<table>
+  <tr><td class="k">드래그</td><td>위치 옮기기 <span style="color:var(--ink-soft)">(다음에 켤 때 그 자리에 그대로)</span></td></tr>
+  <tr><td class="k">휠</td><td>위젯 크기</td></tr>
+  <tr><td class="k"><kbd>−</kbd> <kbd>▶</kbd> <kbd>＋</kbd> <kbd>✕</kbd></td><td><b>네 버튼은 사라지지 않습니다.</b> 도는 동안엔 옅게 있다가 마우스를 올리면 또렷해집니다</td></tr>
+  <tr><td class="k">멈췄을 때 · 시간이 다 됐을 때</td><td>마우스를 올리지 않아도 계속 또렷 — 바로 누를 수 있습니다</td></tr>
+</table>
+<p class="note">
+  10:00에 <b>멈춘 채로</b> 뜹니다 — <kbd>▶</kbd>를 눌러야 갑니다.<br>
+  0이 되면 링이 빨갛게 깜빡이고 <b>지난 시간을 세기 시작합니다.</b><br>
+  <b>다른 창의 포커스를 뺏지 않습니다</b> — PPT를 넘기면서 띄워 두세요.
+</p>
+
+<h2>화면 위 메모</h2>
+<table>
+  <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>M</kbd></td><td>누를 때마다 한 장씩 계단식으로 생김</td></tr>
+  <tr><td class="k">위쪽 진한 띠</td><td>잡고 드래그해서 이동</td></tr>
+  <tr><td class="k">오른쪽 아래 빗금 모서리</td><td>메모 크기 조절</td></tr>
+  <tr><td class="k"><kbd>Ctrl</kbd>+휠 · <kbd>Ctrl</kbd>+<kbd>＋</kbd><kbd>−</kbd><kbd>0</kbd></td><td>글자 크기 <span style="color:var(--ink-soft)">(뒷자리에서도 보이게)</span></td></tr>
+  <tr><td class="k"><kbd>✕</kbd></td><td>닫기 — 메모는 <kbd>Esc</kbd>로 닫히지 않습니다</td></tr>
+</table>
+
+<footer>
+  트레이 아이콘(시계 옆 노란 메모지) <b>오른쪽 클릭</b> → 모든 기능 · [단축키 도움말] · [설정 파일 열기]<br>
+  단축키를 바꾸려면 설정 파일의 <b>Hotkey</b> 항목을 고치고 프로그램을 껐다 켜세요.<br>
+  설정·기록 <b>%APPDATA%\ZoomacItWin\</b> · 캡처한 그림 <b>내 그림 &gt; ZoomacIt</b>
+</footer>
+
+</div>
+</body>
+</html>
