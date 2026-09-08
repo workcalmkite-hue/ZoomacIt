@@ -19,7 +19,7 @@ internal sealed class BreakTimerWindow : Window
     private readonly BreakTimerState _state = new();
     private readonly BreakTimerRingElement _ring;
     private readonly Canvas _canvas = new();
-    private readonly StackPanel _controls = new() { Orientation = Orientation.Horizontal, Opacity = 0 };
+    private readonly StackPanel _controls = new() { Orientation = Orientation.Horizontal };
 
     private readonly RoundIconButton _minus = new("−", "1분 빼기");
     private readonly RoundIconButton _playPause = new("▶", "시작 / 일시정지");
@@ -73,7 +73,7 @@ internal sealed class BreakTimerWindow : Window
         _ring.MouseLeftButtonUp += OnDragEnd;
         PreviewMouseWheel += OnWheel;
         MouseEnter += (_, _) => SetControlsHidden(false);
-        MouseLeave += (_, _) => SetControlsHidden(!_state.IsPaused);
+        MouseLeave += (_, _) => UpdateControlsVisibility();
 
         SourceInitialized += (_, _) =>
         {
@@ -168,7 +168,22 @@ internal sealed class BreakTimerWindow : Window
             (BreakTimerWidgetMetrics.ControlBarHeight(_diameter) - buttonSize) / 2);
     }
 
-    private void SetControlsHidden(bool hidden) => _controls.Opacity = hidden ? 0 : 1;
+    /// <summary>
+    /// 컨트롤 표시. 타이머가 도는 동안에는 시간 조정/재생 버튼을 감추지만
+    /// 닫기 버튼만은 항상 남긴다 — 수업 중에 위젯을 끄려고 헤매는 일은 없어야 한다.
+    /// </summary>
+    private void SetControlsHidden(bool hidden)
+    {
+        foreach (var b in new[] { _minus, _playPause, _plus })
+            b.Opacity = hidden ? 0 : 1;
+
+        // 평소엔 옅게 두고 호버하면 또렷해진다 — 언제든 누를 수 있다는 표시다.
+        _close.Opacity = hidden ? 0.55 : 1;
+    }
+
+    /// <summary>지금 상태에 맞게 컨트롤을 다시 계산한다. 멈춰 있거나 만료된 뒤는 계속 보여준다.</summary>
+    private void UpdateControlsVisibility()
+        => SetControlsHidden(!IsMouseOver && !_state.IsPaused && !_state.IsExpired);
 
     private void SavePosition()
     {
@@ -246,6 +261,8 @@ internal sealed class BreakTimerWindow : Window
             {
                 if (_state.PlaySoundOnExpiration) SystemSounds.Exclamation.Play();
                 StartPulseTimer();
+                // 시간이 다 됐으니 시간을 더하거나 끌 수 있게 컨트롤을 드러낸다.
+                UpdateControlsVisibility();
             }
             _ring.Refresh();
         };
@@ -291,7 +308,7 @@ internal sealed class BreakTimerWindow : Window
 
         _playPause.Glyph = _state.IsPaused ? "▶" : "❚❚";
         // 멈춰 있으면 컨트롤을 계속 보여준다(재생 버튼을 찾을 수 있게).
-        SetControlsHidden(!_state.IsPaused && !IsMouseOver);
+        UpdateControlsVisibility();
     }
 
     protected override void OnClosed(EventArgs e)
