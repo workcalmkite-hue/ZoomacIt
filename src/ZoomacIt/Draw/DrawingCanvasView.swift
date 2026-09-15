@@ -40,6 +40,8 @@ final class DrawingCanvasView: NSView {
 
     /// Freehand path being drawn.
     private var activeFreehand: NSBezierPath?
+    /// Whether `previewLayer` is an arrow (its head gets filled).
+    private var previewIsArrow = false
 
     /// Live spotlight rectangle preview while the user is dragging.
     /// `nil` outside of an active spotlight drag.
@@ -284,6 +286,10 @@ final class DrawingCanvasView: NSView {
                 preview.lineJoinStyle = .round
             }
             preview.stroke()
+            if previewIsArrow && !drawingState.isHighlighterMode {
+                drawingState.currentNSColor.setFill()
+                preview.fill()
+            }
             NSGraphicsContext.current?.cgContext.setBlendMode(.normal)
         }
 
@@ -304,7 +310,7 @@ final class DrawingCanvasView: NSView {
         }
 
         // 5. Vanishing Pen mode indicator (HUD) — only while the mode is on
-        if drawingState.isVanishingPenEnabled {
+        if drawingState.isVanishingPenEnabled || drawingState.isArrowModeEnabled {
             drawVanishingPenIndicator(in: context)
         }
     }
@@ -357,8 +363,8 @@ final class DrawingCanvasView: NSView {
             path = ShapeRenderer.rectanglePath(from: stroke.startPoint, to: stroke.endPoint)
         case .ellipse:
             path = ShapeRenderer.ellipsePath(from: stroke.startPoint, to: stroke.endPoint)
-        case .arrow:
-            path = ShapeRenderer.arrowPath(from: stroke.startPoint, to: stroke.endPoint, penWidth: stroke.lineWidth)
+        case .arrow, .arrowForward:
+            path = ShapeRenderer.arrowPath(for: stroke.shapeType, from: stroke.startPoint, to: stroke.endPoint, penWidth: stroke.lineWidth)
         }
 
         context.saveGState()
@@ -371,15 +377,23 @@ final class DrawingCanvasView: NSView {
             path.lineCapStyle = .round
             path.lineJoinStyle = .round
         }
-        stroke.color.withAlphaComponent(stroke.color.alphaComponent * fadeAlpha).setStroke()
+        let fadedColor = stroke.color.withAlphaComponent(stroke.color.alphaComponent * fadeAlpha)
+        fadedColor.setStroke()
         path.stroke()
+        if stroke.shapeType.isArrow && !stroke.isHighlighter {
+            fadedColor.setFill()
+            path.fill()
+        }
         context.restoreGState()
     }
 
     /// Small bottom-right badge shown while Vanishing Pen mode is armed, so
     /// it's obvious at a glance during a live lecture that strokes will fade.
     private func drawVanishingPenIndicator(in context: CGContext) {
-        let text = "Vanishing Pen"
+        let text = [
+            drawingState.isArrowModeEnabled ? "Arrow" : nil,
+            drawingState.isVanishingPenEnabled ? "Vanishing Pen" : nil
+        ].compactMap { $0 }.joined(separator: " · ")
         let attrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 13, weight: .semibold),
             .foregroundColor: NSColor.white
@@ -476,6 +490,7 @@ final class DrawingCanvasView: NSView {
 
         let modifiers = modifierFlags.intersection(.deviceIndependentFlagsMask)
         let shapeType = drawingState.currentShapeType(modifiers: modifiers)
+        previewIsArrow = false
 
         switch shapeType {
         case .freehand:
@@ -495,8 +510,9 @@ final class DrawingCanvasView: NSView {
             previewLayer = ShapeRenderer.ellipsePath(from: dragOrigin, to: currentPoint)
             activeFreehand = nil
 
-        case .arrow:
-            previewLayer = ShapeRenderer.arrowPath(from: dragOrigin, to: currentPoint, penWidth: drawingState.penWidth)
+        case .arrow, .arrowForward:
+            previewLayer = ShapeRenderer.arrowPath(for: shapeType, from: dragOrigin, to: currentPoint, penWidth: drawingState.penWidth)
+            previewIsArrow = true
             activeFreehand = nil
         }
 
@@ -657,6 +673,12 @@ final class DrawingCanvasView: NSView {
         // Sticky note (memo) — floats above everything and moves with its text
         case "M":
             onStickyNoteRequest?()
+
+        // Toggle arrow mode (plain drag draws an arrow, tip at the drag end)
+        case "A" where modifiers.intersection([.command, .control, .option]).isEmpty:
+            drawingState.isArrowModeEnabled.toggle()
+            updateCursorForTool()
+            setNeedsDisplay(bounds)
 
         // Toggle Vanishing Pen mode
         case "V":
@@ -833,12 +855,17 @@ final class DrawingCanvasView: NSView {
             path = ShapeRenderer.rectanglePath(from: dragOrigin, to: endPoint).cgPath
         case .ellipse:
             path = ShapeRenderer.ellipsePath(from: dragOrigin, to: endPoint).cgPath
-        case .arrow:
-            path = ShapeRenderer.arrowPath(from: dragOrigin, to: endPoint, penWidth: drawingState.penWidth).cgPath
+        case .arrow, .arrowForward:
+            path = ShapeRenderer.arrowPath(for: shapeType, from: dragOrigin, to: endPoint, penWidth: drawingState.penWidth).cgPath
         }
 
         bitmapContext.addPath(path)
         bitmapContext.strokePath()
+        if shapeType.isArrow && !drawingState.isHighlighterMode {
+            bitmapContext.setFillColor(color.cgColor)
+            bitmapContext.addPath(path)
+            bitmapContext.fillPath()
+        }
 
         return bitmapContext.makeImage()
     }

@@ -167,4 +167,14 @@ final class DrawingStateTests: XCTestCase {
         state.isVanishingPenEnabled.toggle()
         XCTAssertFalse(state.isVanishingPenEnabled)
     }
+
+    func testArrowModeMakesPlainDragAnArrowForward() {
+        let state = DrawingState()
+        XCTAssertFalse(state.isArrowModeEnabled)
+        state.isArrowModeEnabled = true
+        XCTAssertEqual(state.currentShapeType(modifiers: []), .arrowForward)
+        // Modifiers still win over arrow mode
+        XCTAssertEqual(state.currentShapeType(modifiers: .shift), .line)
+        XCTAssertEqual(state.currentShapeType(modifiers: [.shift, .control]), .arrow)
+    }
 }

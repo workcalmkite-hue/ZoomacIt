@@ -94,6 +94,12 @@ final class DrawingState {
     /// entered) — not persisted, matching `activeTool`'s volatile pattern.
     var isVanishingPenEnabled: Bool = false
 
+    // MARK: - Arrow Mode
+
+    /// `A` toggles this: plain drags draw arrows whose tip lands where the
+    /// drag ends. Volatile like Vanishing Pen — off again on every Draw entry.
+    var isArrowModeEnabled: Bool = false
+
     // MARK: - Derived
 
     /// The NSColor to use for drawing, applying highlighter alpha if needed.
@@ -115,6 +121,8 @@ final class DrawingState {
             return .line
         } else if hasControl {
             return .rectangle
+        } else if isArrowModeEnabled {
+            return .arrowForward
         } else {
             return .freehand
         }

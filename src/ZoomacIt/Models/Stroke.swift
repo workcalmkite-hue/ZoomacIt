@@ -7,7 +7,10 @@ enum ShapeType: Sendable {
     case line
     case rectangle
     case ellipse
-    case arrow
+    case arrow         // ZoomIt style — tip where the drag started (⇧⌃ drag)
+    case arrowForward  // PowerPoint style — tip where the drag ends (A arrow mode)
+
+    var isArrow: Bool { self == .arrow || self == .arrowForward }
 }
 
 /// Represents a single confirmed drawing stroke.

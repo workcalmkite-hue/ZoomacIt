@@ -33,7 +33,20 @@ final class ShapeRendererTests: XCTestCase {
             from: CGPoint(x: 50, y: 50),
             to: CGPoint(x: 150, y: 50)
         )
-        // Arrow = shaft (moveTo + lineTo) + head (moveTo + lineTo + lineTo) = 5 elements
-        XCTAssertTrue(path.elementCount >= 5)
+        // Arrow = shaft (moveTo + lineTo) + closed head (moveTo + lineTo + lineTo + close) = 6 elements
+        XCTAssertTrue(path.elementCount >= 6)
+    }
+
+    func testArrowForwardPutsTipAtEnd() {
+        let start = CGPoint(x: 50, y: 50)
+        let end = CGPoint(x: 250, y: 50)
+        // ZoomIt style: head sits around the start point
+        let back = ShapeRenderer.arrowPath(for: .arrow, from: start, to: end, penWidth: 3)
+        // PowerPoint style: head sits around the end point
+        let forward = ShapeRenderer.arrowPath(for: .arrowForward, from: start, to: end, penWidth: 3)
+        XCTAssertLessThan(back.bounds.minX, 51)
+        XCTAssertEqual(forward.bounds.maxX, 250, accuracy: 0.5)
+        // The filled head should be taller than a bare line
+        XCTAssertGreaterThan(forward.bounds.height, 10)
     }
 }
