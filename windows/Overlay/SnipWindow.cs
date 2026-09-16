@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -114,13 +114,29 @@ internal sealed class SnipWindow : Window
             WindowInterop.HideFromAltTab(this);
         };
 
-        Loaded += (_, _) =>
+        // 얼린 그림과 안내 문구를 창 크기에 맞춘다.
+        //
+        // ⚠️ 이걸 Loaded 에서 한 번만 하면 배율이 다른 모니터(예: 왼쪽 125%)에서
+        //    화면이 확대돼 보인다. 창을 SetWindowPos 로 그 모니터에 옮기면
+        //    WM_DPICHANGED 가 뒤늦게 오는데, Loaded 는 그보다 먼저 오기 때문에
+        //    그 시점의 ActualWidth 는 아직 100% 기준 값(1920)이다. 거기서 크기를
+        //    박아 버리면 실제 창(1536 DIP)보다 1.25배 큰 그림이 된다.
+        //    그래서 크기가 확정될 때마다(SizeChanged) 다시 맞춘다.
+        void LayoutFrozen()
         {
             frozen.Width = ActualWidth;
             frozen.Height = ActualHeight;
             UpdateDim();
             Canvas.SetLeft(hint, (ActualWidth - hint.ActualWidth) / 2);
             Canvas.SetTop(hint, 40);
+        }
+
+        SizeChanged += (_, _) => LayoutFrozen();
+        hint.SizeChanged += (_, _) => Canvas.SetLeft(hint, (ActualWidth - hint.ActualWidth) / 2);
+
+        Loaded += (_, _) =>
+        {
+            LayoutFrozen();
             Activate();
             Keyboard.Focus(this);
         };
