@@ -76,6 +76,7 @@ final class Settings: @unchecked Sendable {
         static let highlighterWidthMultiplier = "drawHighlighterWidthMultiplier"
         static let spotlightDarkness = "drawSpotlightDarkness"
         static let vanishingPenLifetime = "drawVanishingPenLifetime"
+        static let freezeScreenOnDraw = "drawFreezeScreen"
 
         // Text
         static let defaultFontSize = "textDefaultFontSize"
@@ -123,6 +124,7 @@ final class Settings: @unchecked Sendable {
             Keys.highlighterWidthMultiplier: 4.0,
             Keys.spotlightDarkness: 0.6,
             Keys.vanishingPenLifetime: 3.0,
+            Keys.freezeScreenOnDraw: true,
 
             // Text
             Keys.defaultFontSize: 24.0,
@@ -218,6 +220,15 @@ final class Settings: @unchecked Sendable {
     var spotlightDarkness: CGFloat {
         get { CGFloat(defaults.double(forKey: Keys.spotlightDarkness)) }
         set { defaults.set(Double(newValue), forKey: Keys.spotlightDarkness) }
+    }
+
+    /// When true, ⌃2 freezes the screen (a screenshot taken *before* the app
+    /// activates) and draws on that still image. Without it, activating
+    /// ZoomacIt makes the frontmost app resign active, which closes any menu
+    /// or popup that was open — exactly what you were about to annotate.
+    var freezeScreenOnDraw: Bool {
+        get { defaults.bool(forKey: Keys.freezeScreenOnDraw) }
+        set { defaults.set(newValue, forKey: Keys.freezeScreenOnDraw) }
     }
 
     var vanishingPenLifetime: TimeInterval {
@@ -352,6 +363,7 @@ final class Settings: @unchecked Sendable {
             Keys.defaultPenColor, Keys.defaultPenWidth,
             Keys.highlighterOpacity, Keys.highlighterWidthMultiplier,
             Keys.spotlightDarkness, Keys.vanishingPenLifetime,
+            Keys.freezeScreenOnDraw,
             Keys.defaultFontSize, Keys.fontWeight,
             Keys.defaultZoomLevel, Keys.zoomAnimationEnabled,
             Keys.breakTimerDefaultDuration, Keys.breakTimerColor,

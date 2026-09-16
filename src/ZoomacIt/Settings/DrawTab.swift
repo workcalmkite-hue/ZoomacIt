@@ -3,6 +3,7 @@ import SwiftUI
 /// Draw settings tab: pen color, width, highlighter, text.
 struct DrawTab: View {
 
+    @AppStorage(Settings.Keys.freezeScreenOnDraw) private var freezeScreen: Bool = true
     @AppStorage(Settings.Keys.defaultPenColor) private var penColorRaw: String = PenColor.red.rawValue
     @AppStorage(Settings.Keys.defaultPenWidth) private var penWidth: Double = 3.0
     @AppStorage(Settings.Keys.vanishingPenLifetime) private var vanishingPenLifetime: Double = 3.0
@@ -28,6 +29,13 @@ struct DrawTab: View {
 
     var body: some View {
         Form {
+            Section("Canvas") {
+                Toggle("Freeze the screen when Draw starts", isOn: $freezeScreen)
+                Text("Keeps open menus and popups visible — starting Draw makes the other app lose focus, which closes them. Turn off to draw over the live screen.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Pen") {
                 Picker("Default Color", selection: penColor) {
                     ForEach(PenColor.allCases, id: \.self) { color in
