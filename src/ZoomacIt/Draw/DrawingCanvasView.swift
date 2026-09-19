@@ -72,6 +72,38 @@ final class DrawingCanvasView: NSView {
     /// array empties out (so an idle canvas burns no CPU).
     private var vanishingTimer: Timer?
 
+    // MARK: - Eraser
+
+    /// True while an eraser drag is in progress.
+    private var isErasing = false
+
+    /// Where the eraser ring is drawn — the canvas draws it itself so what
+    /// you see is exactly the area that gets rubbed out. A system cursor
+    /// image cannot be trusted for this: macOS caps and rescales cursors.
+    private var eraserCursorPoint: CGPoint?
+
+    /// Follows the pointer while the eraser is on.
+    private var eraserTrackingArea: NSTrackingArea?
+
+    /// Last point rubbed out, so the drag erases a continuous band.
+    private var lastErasePoint: CGPoint = .zero
+
+    // MARK: - Board Pages
+
+    /// Saved pages while a board background (whiteboard/blackboard) is active.
+    /// Each entry is that page's `finishedLayer`; `nil` means an empty page.
+    /// Empty array = board mode is not in use.
+    private var boardPages: [CGImage?] = []
+
+    /// Index of the page currently on screen within `boardPages`.
+    private var boardPageIndex: Int = 0
+
+    /// Board (whiteboard/blackboard) backgrounds support multiple pages;
+    /// the transparent canvas does not.
+    private var isBoardMode: Bool {
+        drawingState.backgroundMode != .transparent
+    }
+
     // MARK: - Text Mode
 
     private var textInputController: TextInputController?
@@ -97,6 +129,10 @@ final class DrawingCanvasView: NSView {
         case .spotlight:
             cursor = Self.spotlightCursor
         default:
+            if drawingState.isEraserMode {
+                cursor = eraserCursor()
+                break
+            }
             let mods = NSEvent.modifierFlags.intersection(.deviceIndependentFlagsMask)
             let shapeType = drawingState.currentShapeType(modifiers: mods)
             cursor = shapeType == .freehand ? penCursor() : crosshairCursor()
@@ -124,6 +160,26 @@ final class DrawingCanvasView: NSView {
 
         let hotSpot = NSPoint(x: imageSize.width / 2, y: imageSize.height / 2)
         return NSCursor(image: image, hotSpot: hotSpot)
+    }
+
+    /// A small dot. The real size feedback is the ring drawn on the canvas
+    /// (`drawEraserRing`), which lives in the same coordinate space as the
+    /// erasing itself and therefore always matches it.
+    private func eraserCursor() -> NSCursor {
+        let dot: CGFloat = 3
+        let imageSize = NSSize(width: dot + 4, height: dot + 4)
+        let image = NSImage(size: imageSize, flipped: false) { _ in
+            let rect = NSRect(x: 2, y: 2, width: dot, height: dot)
+            NSColor.black.withAlphaComponent(0.8).setFill()
+            NSBezierPath(ovalIn: rect).fill()
+            NSColor.white.setStroke()
+            let border = NSBezierPath(ovalIn: rect)
+            border.lineWidth = 1
+            border.stroke()
+            return true
+        }
+        return NSCursor(image: image,
+                        hotSpot: NSPoint(x: imageSize.width / 2, y: imageSize.height / 2))
     }
 
     /// Generates a crosshair cursor scaled by pen width (shape modes).
@@ -310,8 +366,19 @@ final class DrawingCanvasView: NSView {
         }
 
         // 5. Vanishing Pen mode indicator (HUD) — only while the mode is on
-        if drawingState.isVanishingPenEnabled || drawingState.isArrowModeEnabled {
+        if drawingState.isVanishingPenEnabled || drawingState.isArrowModeEnabled
+            || drawingState.isEraserMode {
             drawVanishingPenIndicator(in: context)
+        }
+
+        // 6. Board page indicator — only once the user has made a second page
+        if isBoardMode && boardPages.count > 1 {
+            drawBoardPageIndicator(in: context)
+        }
+
+        // 7. Eraser ring — same coordinates and same diameter as the erase itself
+        if drawingState.isEraserMode {
+            drawEraserRing(in: context)
         }
     }
 
@@ -391,6 +458,7 @@ final class DrawingCanvasView: NSView {
     /// it's obvious at a glance during a live lecture that strokes will fade.
     private func drawVanishingPenIndicator(in context: CGContext) {
         let text = [
+            drawingState.isEraserMode ? "Eraser" : nil,
             drawingState.isArrowModeEnabled ? "Arrow" : nil,
             drawingState.isVanishingPenEnabled ? "Vanishing Pen" : nil
         ].compactMap { $0 }.joined(separator: " · ")
@@ -457,6 +525,20 @@ final class DrawingCanvasView: NSView {
             return
         }
 
+        if drawingState.isEraserMode {
+            // One undo snapshot per eraser drag, not per segment.
+            strokeManager.pushUndoSnapshot(
+                finishedLayer,
+                backgroundMode: drawingState.backgroundMode,
+                spotlightRect: drawingState.spotlightRect
+            )
+            isErasing = true
+            lastErasePoint = point
+            moveEraserRing(to: point)
+            erase(from: point, to: point)
+            return
+        }
+
         freehandPoints = [point]
         isDragging = true
 
@@ -466,6 +548,13 @@ final class DrawingCanvasView: NSView {
     }
 
     override func mouseDragged(with event: NSEvent) {
+        if isErasing {
+            let currentPoint = convert(event.locationInWindow, from: nil)
+            erase(from: lastErasePoint, to: currentPoint)
+            lastErasePoint = currentPoint
+            moveEraserRing(to: currentPoint)
+            return
+        }
         guard isDragging else { return }
 
         let currentPoint = convert(event.locationInWindow, from: nil)
@@ -520,6 +609,10 @@ final class DrawingCanvasView: NSView {
     }
 
     override func mouseUp(with event: NSEvent) {
+        if isErasing {
+            isErasing = false
+            return
+        }
         guard isDragging else { return }
         isDragging = false
 
@@ -610,6 +703,10 @@ final class DrawingCanvasView: NSView {
         case "\u{1B}": // Escape
             if drawingState.isTextMode {
                 exitTextMode()
+            } else if hasCanvasContent {
+                // First Escape wipes the canvas so the user can keep drawing;
+                // a second one (nothing left to wipe) leaves Draw mode.
+                clearCanvas()
             } else {
                 onDismiss?()
             }
@@ -622,6 +719,11 @@ final class DrawingCanvasView: NSView {
                 } else {
                     drawingState.isHighlighterMode = false
                 }
+                // Picking a colour means "draw again".
+                if drawingState.isEraserMode {
+                    drawingState.isEraserMode = false
+                    refreshEraserTracking()
+                }
                 drawingState.activeColor = color
                 if drawingState.isTextMode {
                     textInputController?.updateColor(drawingState.currentNSColor)
@@ -631,18 +733,7 @@ final class DrawingCanvasView: NSView {
 
         // Clear all
         case "E":
-            strokeManager.pushUndoSnapshot(
-                finishedLayer,
-                backgroundMode: drawingState.backgroundMode,
-                spotlightRect: drawingState.spotlightRect
-            )
-            finishedLayer = nil
-            vanishingStrokes.removeAll()
-            vanishingTimer?.invalidate()
-            vanishingTimer = nil
-            // Clearing means clearing — the live text boxes go too.
-            textInputController?.deleteAll()
-            setNeedsDisplay(bounds)
+            clearCanvas()
 
         // Whiteboard
         case "W":
@@ -653,6 +744,8 @@ final class DrawingCanvasView: NSView {
             )
             drawingState.backgroundMode = .whiteboard
             finishedLayer = nil
+            textInputController?.deleteAll()
+            startBoardPages()
             setNeedsDisplay(bounds)
 
         // Blackboard
@@ -664,6 +757,15 @@ final class DrawingCanvasView: NSView {
             )
             drawingState.backgroundMode = .blackboard
             finishedLayer = nil
+            textInputController?.deleteAll()
+            startBoardPages()
+            setNeedsDisplay(bounds)
+
+        // Eraser — drag to rub out part of the canvas
+        case "X" where modifiers.intersection([.command, .control, .option]).isEmpty:
+            drawingState.isEraserMode.toggle()
+            refreshEraserTracking()
+            updateCursorForTool()
             setNeedsDisplay(bounds)
 
         // Text mode
@@ -721,12 +823,16 @@ final class DrawingCanvasView: NSView {
         // Arrow keys — pen size (when no spotlight rect; ZoomIt-compatible)
         case String(UnicodeScalar(NSUpArrowFunctionKey)!)
             where drawingState.spotlightRect == nil:
+            let widthBefore = drawingState.eraserWidth
             drawingState.increasePenWidth()
+            invalidateEraserRing(previousWidth: widthBefore)
             updateCursorForTool()
 
         case String(UnicodeScalar(NSDownArrowFunctionKey)!)
             where drawingState.spotlightRect == nil:
+            let widthBefore = drawingState.eraserWidth
             drawingState.decreasePenWidth()
+            invalidateEraserRing(previousWidth: widthBefore)
             updateCursorForTool()
 
         // Spotlight darkness — only meaningful when a spotlight rect exists
@@ -742,9 +848,114 @@ final class DrawingCanvasView: NSView {
             drawingState.decreaseSpotlightDarkness()
             setNeedsDisplay(bounds)
 
+        // Left/Right arrows — board pages (whiteboard/blackboard only)
+        case String(UnicodeScalar(NSRightArrowFunctionKey)!)
+            where isBoardMode
+                && modifiers.intersection([.command, .control, .option, .shift]).isEmpty:
+            goToBoardPage(boardPageIndex + 1)
+
+        case String(UnicodeScalar(NSLeftArrowFunctionKey)!)
+            where isBoardMode
+                && modifiers.intersection([.command, .control, .option, .shift]).isEmpty:
+            goToBoardPage(boardPageIndex - 1)
+
         default:
             break
         }
+    }
+
+    // MARK: - Board Pages
+
+    /// Begin a fresh single-page board. Called when W/K switches the background.
+    private func startBoardPages() {
+        boardPages = [nil]
+        boardPageIndex = 0
+    }
+
+    /// Move to another board page, creating one when stepping past the last.
+    /// Out-of-range targets are ignored (no wrap-around).
+    private func goToBoardPage(_ target: Int) {
+        guard isBoardMode, target >= 0 else { return }
+        if boardPages.isEmpty { startBoardPages() }
+        guard target <= boardPages.count else { return }
+
+        // Live text boxes belong to the page they were typed on — bake them in.
+        if textInputController?.hasText == true {
+            finishedLayer = textInputController?.rasterize(
+                onto: finishedLayer, canvasSize: bounds.size
+            ) ?? finishedLayer
+            textInputController?.deleteAll()
+        }
+
+        boardPages[boardPageIndex] = finishedLayer
+
+        if target == boardPages.count {
+            boardPages.append(nil)
+        }
+        boardPageIndex = target
+        finishedLayer = boardPages[target]
+
+        // Fading strokes and undo history are per page — leaving the page drops them.
+        vanishingStrokes.removeAll()
+        vanishingTimer?.invalidate()
+        vanishingTimer = nil
+        strokeManager.clearHistory()
+
+        setNeedsDisplay(bounds)
+    }
+
+    /// "2 / 3" badge, shown only once a second page exists.
+    private func drawBoardPageIndicator(in context: CGContext) {
+        let text = "\(boardPageIndex + 1) / \(boardPages.count)"
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 13, weight: .semibold),
+            .foregroundColor: NSColor.white
+        ]
+        let attributedString = NSAttributedString(string: text, attributes: attrs)
+        let textSize = attributedString.size()
+
+        let padding: CGFloat = 8
+        let margin: CGFloat = 16
+        let badgeRect = CGRect(
+            x: margin,
+            y: margin,
+            width: textSize.width + padding * 2,
+            height: textSize.height + padding
+        )
+
+        context.saveGState()
+        NSColor.black.withAlphaComponent(0.6).setFill()
+        NSBezierPath(roundedRect: badgeRect, xRadius: 6, yRadius: 6).fill()
+        context.restoreGState()
+
+        attributedString.draw(at: CGPoint(x: badgeRect.minX + padding,
+                                          y: badgeRect.minY + padding / 2))
+    }
+
+    /// Whether anything is on the canvas that Escape should wipe first.
+    private var hasCanvasContent: Bool {
+        finishedLayer != nil
+            || !vanishingStrokes.isEmpty
+            || textInputController?.hasText == true
+            || drawingState.spotlightRect != nil
+    }
+
+    /// Wipe the current canvas (E, and the first Escape). The background mode,
+    /// the board page you are on and the pen settings all stay as they are.
+    private func clearCanvas() {
+        strokeManager.pushUndoSnapshot(
+            finishedLayer,
+            backgroundMode: drawingState.backgroundMode,
+            spotlightRect: drawingState.spotlightRect
+        )
+        finishedLayer = nil
+        vanishingStrokes.removeAll()
+        vanishingTimer?.invalidate()
+        vanishingTimer = nil
+        drawingState.spotlightRect = nil
+        // Clearing means clearing — the live text boxes go too.
+        textInputController?.deleteAll()
+        setNeedsDisplay(bounds)
     }
 
     /// Toggle spotlight: arm the tool if no rect exists, otherwise clear the active rect.
@@ -802,17 +1013,153 @@ final class DrawingCanvasView: NSView {
         }
 
         // Scroll wheel → pen size (also works with Ctrl held for ZoomIt compatibility)
+        let widthBefore = drawingState.eraserWidth
         if event.scrollingDeltaY > 0 {
             drawingState.increasePenWidth()
         } else if event.scrollingDeltaY < 0 {
             drawingState.decreasePenWidth()
         }
+        invalidateEraserRing(previousWidth: widthBefore)
         updateCursorForTool()
     }
 
     // MARK: - Compositing
 
     /// Renders the current stroke onto finishedLayer and returns the new CGImage.
+    // MARK: - Eraser
+
+    /// Keep a mouse-moved tracking area alive only while the eraser is on.
+    private func refreshEraserTracking() {
+        if let existing = eraserTrackingArea {
+            removeTrackingArea(existing)
+            eraserTrackingArea = nil
+        }
+        guard drawingState.isEraserMode else {
+            eraserCursorPoint = nil
+            return
+        }
+        let area = NSTrackingArea(
+            rect: bounds,
+            options: [.mouseMoved, .mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+            owner: self,
+            userInfo: nil
+        )
+        addTrackingArea(area)
+        eraserTrackingArea = area
+        // Seed the ring at the current pointer so it shows before the first move.
+        if let window {
+            let inWindow = window.convertPoint(fromScreen: NSEvent.mouseLocation)
+            eraserCursorPoint = convert(inWindow, from: nil)
+        }
+        setNeedsDisplay(bounds)
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        guard drawingState.isEraserMode else { return }
+        moveEraserRing(to: convert(event.locationInWindow, from: nil))
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        guard drawingState.isEraserMode else { return }
+        if let old = eraserCursorPoint {
+            setNeedsDisplay(eraserRingRect(at: old))
+        }
+        eraserCursorPoint = nil
+    }
+
+    /// Redraw only the two ring areas, not the whole screen-sized canvas.
+    private func moveEraserRing(to point: CGPoint) {
+        if let old = eraserCursorPoint {
+            setNeedsDisplay(eraserRingRect(at: old))
+        }
+        eraserCursorPoint = point
+        setNeedsDisplay(eraserRingRect(at: point))
+    }
+
+    /// Redraw the ring after the eraser changes size, covering both the old
+    /// and the new circle so no outline is left behind.
+    private func invalidateEraserRing(previousWidth: CGFloat) {
+        guard drawingState.isEraserMode, let point = eraserCursorPoint else { return }
+        let radius = max(previousWidth, drawingState.eraserWidth) / 2 + 3
+        setNeedsDisplay(CGRect(x: point.x - radius, y: point.y - radius,
+                               width: radius * 2, height: radius * 2))
+    }
+
+    /// The ring's dirty rect — the erased circle plus room for the ring stroke.
+    private func eraserRingRect(at point: CGPoint) -> CGRect {
+        let radius = drawingState.eraserWidth / 2 + 3
+        return CGRect(x: point.x - radius, y: point.y - radius,
+                      width: radius * 2, height: radius * 2)
+    }
+
+    /// Draw the eraser outline exactly on the circle that `erase` clears.
+    private func drawEraserRing(in context: CGContext) {
+        guard let point = eraserCursorPoint else { return }
+        let rect = CGRect(
+            x: point.x - drawingState.eraserWidth / 2,
+            y: point.y - drawingState.eraserWidth / 2,
+            width: drawingState.eraserWidth,
+            height: drawingState.eraserWidth
+        )
+
+        context.saveGState()
+        // Two rings so the outline stays visible on white and black alike.
+        NSColor.black.withAlphaComponent(0.55).setStroke()
+        let outer = NSBezierPath(ovalIn: rect.insetBy(dx: -1, dy: -1))
+        outer.lineWidth = 2
+        outer.stroke()
+        NSColor.white.setStroke()
+        let inner = NSBezierPath(ovalIn: rect)
+        inner.lineWidth = 1
+        inner.stroke()
+        context.restoreGState()
+    }
+
+    /// Rub out the band between two points by clearing those pixels out of
+    /// `finishedLayer`. What shows through is whatever is underneath — the
+    /// whiteboard, the blackboard, or the frozen desktop.
+    private func erase(from start: CGPoint, to end: CGPoint) {
+        let size = bounds.size
+        guard size.width > 0 && size.height > 0 else { return }
+        guard let bitmapContext = CGContext.createBitmapContext(size: size) else { return }
+
+        if let existing = finishedLayer {
+            bitmapContext.draw(existing, in: CGRect(origin: .zero, size: size))
+        }
+
+        bitmapContext.setBlendMode(.clear)
+        bitmapContext.setLineWidth(drawingState.eraserWidth)
+        bitmapContext.setLineCap(.round)
+        bitmapContext.setLineJoin(.round)
+        bitmapContext.move(to: start)
+        bitmapContext.addLine(to: end)
+        bitmapContext.strokePath()
+
+        finishedLayer = bitmapContext.makeImage()
+
+        // Fading strokes are rendered live, not baked in — wipe the ones the
+        // eraser passed over so they disappear too.
+        if !vanishingStrokes.isEmpty {
+            let radius = drawingState.eraserWidth / 2
+            let band = CGRect(x: min(start.x, end.x) - radius,
+                              y: min(start.y, end.y) - radius,
+                              width: abs(end.x - start.x) + radius * 2,
+                              height: abs(end.y - start.y) + radius * 2)
+            vanishingStrokes.removeAll { stroke in
+                let pts = stroke.points.isEmpty ? [stroke.startPoint, stroke.endPoint] : stroke.points
+                let xs = pts.map(\.x), ys = pts.map(\.y)
+                guard let minX = xs.min(), let maxX = xs.max(),
+                      let minY = ys.min(), let maxY = ys.max() else { return false }
+                let pad = stroke.lineWidth / 2
+                return CGRect(x: minX - pad, y: minY - pad,
+                              width: maxX - minX + pad * 2,
+                              height: maxY - minY + pad * 2).intersects(band)
+            }
+        }
+
+        setNeedsDisplay(bounds)
+    }
+
     private func compositeStrokeOntoFinished(shapeType: ShapeType, endPoint: CGPoint) -> CGImage? {
         let size = bounds.size
         guard size.width > 0 && size.height > 0 else { return finishedLayer }
@@ -949,6 +1296,10 @@ final class DrawingCanvasView: NSView {
 
     private func enterTextMode() {
         drawingState.isTextMode = true
+        if drawingState.isEraserMode {
+            drawingState.isEraserMode = false
+            refreshEraserTracking()
+        }
         // The controller owns the live text boxes for the whole Draw session,
         // so it is created once and reused every time text mode is re-entered.
         if textInputController == nil {

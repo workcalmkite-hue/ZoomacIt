@@ -44,6 +44,15 @@ final class DrawingState {
     var penWidth: CGFloat = Settings.shared.defaultPenWidth
     var isHighlighterMode: Bool = false
 
+    /// Eraser tool: drags rub out part of the canvas instead of drawing.
+    var isEraserMode: Bool = false
+
+    /// How much wider the eraser is than the pen.
+    static let eraserWidthMultiplier: CGFloat = 4.0
+
+    /// Diameter of the eraser, derived from the current pen width.
+    var eraserWidth: CGFloat { penWidth * Self.eraserWidthMultiplier }
+
     // MARK: - Text Mode
 
     var isTextMode: Bool = false
