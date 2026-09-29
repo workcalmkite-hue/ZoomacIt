@@ -77,13 +77,27 @@ final class DrawingCanvasView: NSView {
     /// True while an eraser drag is in progress.
     private var isErasing = false
 
-    /// Where the eraser ring is drawn — the canvas draws it itself so what
-    /// you see is exactly the area that gets rubbed out. A system cursor
-    /// image cannot be trusted for this: macOS caps and rescales cursors.
-    private var eraserCursorPoint: CGPoint?
+    /// Where the eraser ring (or the drawn pointer) sits — the canvas draws
+    /// it itself so what you see is exactly the area that gets rubbed out.
+    /// A system cursor image cannot be trusted for this: macOS caps and
+    /// rescales cursors.
+    private var pointerPoint: CGPoint?
 
-    /// Follows the pointer while the eraser is on.
-    private var eraserTrackingArea: NSTrackingArea?
+    /// Follows the pointer while the eraser is on or the pointer is drawn.
+    private var pointerTrackingArea: NSTrackingArea?
+
+    // MARK: - Drawn Pointer
+
+    /// Set when Draw opens over a running slideshow (Keynote play mode).
+    /// The slideshow app stays active so its show keeps playing, and it
+    /// keeps the system cursor hidden — ZoomacIt cannot unhide it without
+    /// activating itself. The canvas draws its own pointer instead.
+    var drawsOwnPointer = false {
+        didSet { refreshPointerTracking() }
+    }
+
+    /// Diameter of the drawn pointer's dot.
+    private static let pointerDotSize: CGFloat = 14
 
     /// Last point rubbed out, so the drag erases a continuous band.
     private var lastErasePoint: CGPoint = .zero
@@ -296,6 +310,10 @@ final class DrawingCanvasView: NSView {
     /// Refresh the cursor after the active tool changes.
     private func updateCursorForTool() {
         window?.invalidateCursorRects(for: self)
+        // The drawn pointer takes the pen colour, so repaint it too.
+        if drawsOwnPointer, let point = pointerPoint {
+            setNeedsDisplay(pointerRect(at: point))
+        }
     }
 
     // MARK: - Drawing
@@ -379,6 +397,9 @@ final class DrawingCanvasView: NSView {
         // 7. Eraser ring — same coordinates and same diameter as the erase itself
         if drawingState.isEraserMode {
             drawEraserRing(in: context)
+        } else if drawsOwnPointer {
+            // 8. Drawn pointer — the system cursor is hidden by a slideshow
+            drawOwnPointer(in: context)
         }
     }
 
@@ -534,7 +555,7 @@ final class DrawingCanvasView: NSView {
             )
             isErasing = true
             lastErasePoint = point
-            moveEraserRing(to: point)
+            movePointer(to: point)
             erase(from: point, to: point)
             return
         }
@@ -552,13 +573,14 @@ final class DrawingCanvasView: NSView {
             let currentPoint = convert(event.locationInWindow, from: nil)
             erase(from: lastErasePoint, to: currentPoint)
             lastErasePoint = currentPoint
-            moveEraserRing(to: currentPoint)
+            movePointer(to: currentPoint)
             return
         }
         guard isDragging else { return }
 
         let currentPoint = convert(event.locationInWindow, from: nil)
         lastDragPoint = currentPoint
+        if drawsOwnPointer { movePointer(to: currentPoint) }
         updateDragPreview(at: currentPoint, modifierFlags: event.modifierFlags)
     }
 
@@ -722,7 +744,7 @@ final class DrawingCanvasView: NSView {
                 // Picking a colour means "draw again".
                 if drawingState.isEraserMode {
                     drawingState.isEraserMode = false
-                    refreshEraserTracking()
+                    refreshPointerTracking()
                 }
                 drawingState.activeColor = color
                 if drawingState.isTextMode {
@@ -764,7 +786,7 @@ final class DrawingCanvasView: NSView {
         // Eraser — drag to rub out part of the canvas
         case "X" where modifiers.intersection([.command, .control, .option]).isEmpty:
             drawingState.isEraserMode.toggle()
-            refreshEraserTracking()
+            refreshPointerTracking()
             updateCursorForTool()
             setNeedsDisplay(bounds)
 
@@ -1028,14 +1050,19 @@ final class DrawingCanvasView: NSView {
     /// Renders the current stroke onto finishedLayer and returns the new CGImage.
     // MARK: - Eraser
 
-    /// Keep a mouse-moved tracking area alive only while the eraser is on.
-    private func refreshEraserTracking() {
-        if let existing = eraserTrackingArea {
+    /// Whether the canvas needs mouse-moved events to draw a pointer.
+    private var tracksPointer: Bool {
+        drawingState.isEraserMode || drawsOwnPointer
+    }
+
+    /// Keep a mouse-moved tracking area alive only while a pointer is drawn.
+    private func refreshPointerTracking() {
+        if let existing = pointerTrackingArea {
             removeTrackingArea(existing)
-            eraserTrackingArea = nil
+            pointerTrackingArea = nil
         }
-        guard drawingState.isEraserMode else {
-            eraserCursorPoint = nil
+        guard tracksPointer else {
+            pointerPoint = nil
             return
         }
         let area = NSTrackingArea(
@@ -1045,56 +1072,56 @@ final class DrawingCanvasView: NSView {
             userInfo: nil
         )
         addTrackingArea(area)
-        eraserTrackingArea = area
+        pointerTrackingArea = area
         // Seed the ring at the current pointer so it shows before the first move.
         if let window {
             let inWindow = window.convertPoint(fromScreen: NSEvent.mouseLocation)
-            eraserCursorPoint = convert(inWindow, from: nil)
+            pointerPoint = convert(inWindow, from: nil)
         }
         setNeedsDisplay(bounds)
     }
 
     override func mouseMoved(with event: NSEvent) {
-        guard drawingState.isEraserMode else { return }
-        moveEraserRing(to: convert(event.locationInWindow, from: nil))
+        guard tracksPointer else { return }
+        movePointer(to: convert(event.locationInWindow, from: nil))
     }
 
     override func mouseExited(with event: NSEvent) {
-        guard drawingState.isEraserMode else { return }
-        if let old = eraserCursorPoint {
-            setNeedsDisplay(eraserRingRect(at: old))
+        guard tracksPointer else { return }
+        if let old = pointerPoint {
+            setNeedsDisplay(pointerRect(at: old))
         }
-        eraserCursorPoint = nil
+        pointerPoint = nil
     }
 
     /// Redraw only the two ring areas, not the whole screen-sized canvas.
-    private func moveEraserRing(to point: CGPoint) {
-        if let old = eraserCursorPoint {
-            setNeedsDisplay(eraserRingRect(at: old))
+    private func movePointer(to point: CGPoint) {
+        if let old = pointerPoint {
+            setNeedsDisplay(pointerRect(at: old))
         }
-        eraserCursorPoint = point
-        setNeedsDisplay(eraserRingRect(at: point))
+        pointerPoint = point
+        setNeedsDisplay(pointerRect(at: point))
     }
 
     /// Redraw the ring after the eraser changes size, covering both the old
     /// and the new circle so no outline is left behind.
     private func invalidateEraserRing(previousWidth: CGFloat) {
-        guard drawingState.isEraserMode, let point = eraserCursorPoint else { return }
+        guard drawingState.isEraserMode, let point = pointerPoint else { return }
         let radius = max(previousWidth, drawingState.eraserWidth) / 2 + 3
         setNeedsDisplay(CGRect(x: point.x - radius, y: point.y - radius,
                                width: radius * 2, height: radius * 2))
     }
 
     /// The ring's dirty rect — the erased circle plus room for the ring stroke.
-    private func eraserRingRect(at point: CGPoint) -> CGRect {
-        let radius = drawingState.eraserWidth / 2 + 3
+    private func pointerRect(at point: CGPoint) -> CGRect {
+        let radius = max(drawingState.eraserWidth, Self.pointerDotSize) / 2 + 3
         return CGRect(x: point.x - radius, y: point.y - radius,
                       width: radius * 2, height: radius * 2)
     }
 
     /// Draw the eraser outline exactly on the circle that `erase` clears.
     private func drawEraserRing(in context: CGContext) {
-        guard let point = eraserCursorPoint else { return }
+        guard let point = pointerPoint else { return }
         let rect = CGRect(
             x: point.x - drawingState.eraserWidth / 2,
             y: point.y - drawingState.eraserWidth / 2,
@@ -1112,6 +1139,28 @@ final class DrawingCanvasView: NSView {
         let inner = NSBezierPath(ovalIn: rect)
         inner.lineWidth = 1
         inner.stroke()
+        context.restoreGState()
+    }
+
+    /// Draw a pen-coloured dot where the pointer is, ringed in white and
+    /// black so it reads on any slide.
+    private func drawOwnPointer(in context: CGContext) {
+        guard let point = pointerPoint else { return }
+        let size = Self.pointerDotSize
+        let rect = CGRect(x: point.x - size / 2, y: point.y - size / 2,
+                          width: size, height: size)
+
+        context.saveGState()
+        drawingState.currentNSColor.withAlphaComponent(1).setFill()
+        NSBezierPath(ovalIn: rect).fill()
+        NSColor.white.setStroke()
+        let inner = NSBezierPath(ovalIn: rect)
+        inner.lineWidth = 2
+        inner.stroke()
+        NSColor.black.withAlphaComponent(0.55).setStroke()
+        let outer = NSBezierPath(ovalIn: rect.insetBy(dx: -1.5, dy: -1.5))
+        outer.lineWidth = 1
+        outer.stroke()
         context.restoreGState()
     }
 
@@ -1298,7 +1347,7 @@ final class DrawingCanvasView: NSView {
         drawingState.isTextMode = true
         if drawingState.isEraserMode {
             drawingState.isEraserMode = false
-            refreshEraserTracking()
+            refreshPointerTracking()
         }
         // The controller owns the live text boxes for the whole Draw session,
         // so it is created once and reused every time text mode is re-entered.

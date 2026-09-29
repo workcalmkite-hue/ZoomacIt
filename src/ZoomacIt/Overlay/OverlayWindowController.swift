@@ -88,6 +88,8 @@ final class OverlayWindowController {
         window.contentView = canvas
         window.makeKeyAndOrderFront(nil)
         window.makeFirstResponder(canvas)
+        // A slideshow keeps the system cursor hidden while it stays active.
+        canvas.drawsOwnPointer = OverlayLevel.frontmostAppIsPresenting()
 
         // Ensure the app is active so the window receives events
         OverlayLevel.activateUnlessPresenting()
