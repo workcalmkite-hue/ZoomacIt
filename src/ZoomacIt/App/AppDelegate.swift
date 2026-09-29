@@ -22,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSLog("[AppDelegate] applicationDidFinishLaunching")
 
         statusBarController = StatusBarController()
+        OverlayLevel.startTracking()
         statusBarController?.onPreferences = { [weak self] in
             self?.showPreferences()
         }

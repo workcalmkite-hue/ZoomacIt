@@ -23,7 +23,7 @@ final class BreakTimerWindow: NSPanel {
         hasShadow = false
         // 99: above normal windows but below the zoom/draw overlay (101)
         // and below screenshot-tool overlays like Snipaste's snipper (102).
-        level = .init(rawValue: Int(CGWindowLevelForKey(.popUpMenuWindow)) - 2)
+        level = OverlayLevel.floating()
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         isReleasedWhenClosed = false
         isMovableByWindowBackground = true
