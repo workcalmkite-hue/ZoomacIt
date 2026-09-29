@@ -2,12 +2,16 @@ import AppKit
 
 /// A borderless, transparent window that sits above all other windows
 /// and captures input for Draw mode.
-final class OverlayWindow: NSWindow {
+///
+/// It is a non-activating panel so it can take keyboard input without
+/// activating ZoomacIt — Keynote hides its slideshow the moment it stops
+/// being the active app, which made ⌃1/⌃2 blank out a running presentation.
+final class OverlayWindow: NSPanel {
 
     convenience init(for screen: NSScreen) {
         self.init(
             contentRect: screen.frame,
-            styleMask: .borderless,
+            styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
@@ -23,6 +27,7 @@ final class OverlayWindow: NSWindow {
         level = OverlayLevel.overlay()
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         isReleasedWhenClosed = false
+        hidesOnDeactivate = false
         acceptsMouseMovedEvents = true
         ignoresMouseEvents = false
     }
@@ -89,6 +94,41 @@ enum OverlayLevel {
             if coversDisplay { top = max(top ?? layer, layer) }
         }
         return top
+    }
+
+    // MARK: - Activation
+
+    /// Activates ZoomacIt so its overlay gets input — except while the
+    /// frontmost app is showing a full-screen slideshow. Keynote hides its
+    /// slideshow as soon as it is deactivated; the overlay is a
+    /// non-activating panel, so it still receives keys without activating.
+    static func activateUnlessPresenting() {
+        if frontmostAppIsPresenting() { return }
+        NSApplication.shared.activate(ignoringOtherApps: true)
+    }
+
+    /// Whether the frontmost app (not ZoomacIt) has a window above the normal
+    /// level covering a whole display — how Keynote's play mode looks (level 25).
+    static func frontmostAppIsPresenting() -> Bool {
+        guard let front = NSWorkspace.shared.frontmostApplication,
+              front.processIdentifier != ProcessInfo.processInfo.processIdentifier,
+              let list = CGWindowListCopyWindowInfo(
+                [.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID
+              ) as? [[String: Any]]
+        else { return false }
+
+        let screenSizes = NSScreen.screens.map { $0.frame.size }
+        return list.contains { info in
+            guard let pid = info[kCGWindowOwnerPID as String] as? pid_t,
+                  pid == front.processIdentifier,
+                  let layer = info[kCGWindowLayer as String] as? Int, layer > 0,
+                  let boundsDict = info[kCGWindowBounds as String] as? NSDictionary,
+                  let bounds = CGRect(dictionaryRepresentation: boundsDict as CFDictionary)
+            else { return false }
+            return screenSizes.contains {
+                bounds.width >= $0.width - 1 && bounds.height >= $0.height - 1
+            }
+        }
     }
 
     // MARK: - Tracking

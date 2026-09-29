@@ -90,7 +90,7 @@ final class OverlayWindowController {
         window.makeFirstResponder(canvas)
 
         // Ensure the app is active so the window receives events
-        NSApplication.shared.activate(ignoringOtherApps: true)
+        OverlayLevel.activateUnlessPresenting()
 
         overlayWindow = window
         canvasView = canvas

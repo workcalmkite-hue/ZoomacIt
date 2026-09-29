@@ -125,7 +125,7 @@ final class StillZoomWindowController {
         window.makeKeyAndOrderFront(nil)
         window.makeFirstResponder(view)
 
-        NSApplication.shared.activate(ignoringOtherApps: true)
+        OverlayLevel.activateUnlessPresenting()
 
         zoomWindow = window
         zoomView = view
