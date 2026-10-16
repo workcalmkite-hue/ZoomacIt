@@ -322,6 +322,16 @@ internal sealed class DrawOverlayWindow : Window
         }
     }
 
+    /// <summary>
+    /// 진단 모드(<c>--snip-test</c>)에서 마우스 없이 확정 획을 하나 넣는다.
+    /// 화면 캡처에 판서가 들어오는지 확인하는 용도 외에는 쓰지 않는다.
+    /// </summary>
+    internal void AddStrokeForDiagnostics(Stroke stroke)
+    {
+        _permanentLayer.Strokes.Add(stroke);
+        _permanentLayer.Refresh();
+    }
+
     private void Undo()
     {
         if (_permanentLayer.Strokes.Count == 0) return;
