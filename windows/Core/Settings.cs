@@ -29,6 +29,8 @@ internal sealed class Settings
     public string HotkeyVanishingPen { get; set; } = "Ctrl+Shift+D";
     public string HotkeyMouseSpotlight { get; set; } = "Ctrl+Shift+S";
     public string HotkeyStickyNote { get; set; } = "Ctrl+M";
+    /// <summary>판서를 글상자부터 시작 (맥은 ⌃T — 윈도우 Ctrl+T는 브라우저 새 탭이라 Ctrl+5).</summary>
+    public string HotkeyText { get; set; } = "Ctrl+5";
 
     /// <summary>캡처 이미지를 저장할 폴더. 비워두면 "내 그림  ZoomacIt".</summary>
     public string SnipFolder { get; set; } = "";
@@ -43,6 +45,14 @@ internal sealed class Settings
     public double PenWidth { get; set; } = 5.0;
     /// <summary>드로잉 오버레이를 열었을 때 "지워지는 펜"이 처음부터 켜져 있는지.</summary>
     public bool VanishingPenOnByDefault { get; set; } = true;
+    /// <summary>
+    /// 그리기를 켤 때 지금 화면을 얼려서 그 위에 그린다 (맥 v1.3).
+    /// 오버레이가 앞으로 나오는 순간 크롬 메뉴·드롭다운이 스스로 닫혀 버리는 걸 막는다.
+    /// 끄면 예전처럼 움직이는 화면 위에 투명하게 그린다.
+    /// </summary>
+    public bool DrawFreezeScreen { get; set; } = true;
+    /// <summary>글상자 글자 크기.</summary>
+    public double TextFontSize { get; set; } = 32;
 
     // --- 브레이크 타이머 위젯 ---
     public int BreakTimerDefaultDurationSeconds { get; set; } = 600;

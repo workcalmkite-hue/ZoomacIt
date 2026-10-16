@@ -66,6 +66,14 @@ public partial class App : Application
             return;
         }
 
+        // 판서 기능(화살표·지우개·칠판 페이지·글상자·Esc)을 차례로 실행해 단계별 PNG를 남기는 진단 모드.
+        if (e.Args.Length > 0 && e.Args[0] == "--draw-test")
+        {
+            string outDir = e.Args.Length > 1 ? e.Args[1] : Path.Combine(Path.GetTempPath(), "zoomacit-draw-test");
+            RenderTest.DrawFeaturesTest(outDir, Shutdown);
+            return;
+        }
+
         // 판서를 띄운 채 GDI 화면 캡처를 해서 판서가 캡처에 들어오는지 확인하는 진단 모드.
         if (e.Args.Length > 0 && e.Args[0] == "--snip-test")
         {
@@ -112,9 +120,40 @@ public partial class App : Application
         }
 
         CloseFullScreenModes();
+
+        // 오버레이가 뜨기 «전에» 화면을 찍어 둔다. 오버레이가 앞으로 나오면 아래 앱이
+        // 비활성화되면서 웹으로 그린 메뉴(시트 메뉴·드라이브 «새로 만들기»)가 스스로 닫히기
+        // 때문이다 — 얼린 화면 위에 그리면 그 메뉴가 그대로 남는다 (맥 v1.3).
+        if (background is null && Settings.Shared.DrawFreezeScreen)
+        {
+            try
+            {
+                background = ScreenCapture.CaptureRegion(ScreenHelper.ScreenContainingMouse().BoundsPx());
+            }
+            catch (Exception ex)
+            {
+                Log.Write($"그리기 화면 얼리기 실패 — 투명 판서로 엽니다: {ex.Message}");
+            }
+        }
+
         _drawOverlay = new DrawOverlayWindow(startVanishing, background);
         _drawOverlay.Closed += (_, _) => _drawOverlay = null;
+        _drawOverlay.StickyNoteRequested += () => _stickyNotes.SpawnNote();
         _drawOverlay.Show();
+    }
+
+    /// <summary>글상자 단축키 — 판서가 없으면 열면서, 있으면 글상자 모드만 켜고 끈다.</summary>
+    private void ToggleTextBox()
+    {
+        if (_drawOverlay is not null)
+        {
+            _drawOverlay.Activate();
+            _drawOverlay.ToggleTextMode();
+            return;
+        }
+
+        ToggleDrawOverlay(startVanishing: false);
+        _drawOverlay?.StartInTextMode();
     }
 
     private void ToggleStillZoom()
@@ -242,6 +281,8 @@ public partial class App : Application
             (_, _) => ToggleDrawOverlay(startVanishing: false));
         menu.Items.Add($"지워지는 펜  ({Settings.Shared.HotkeyVanishingPen})", null,
             (_, _) => ToggleDrawOverlay(startVanishing: true));
+        menu.Items.Add($"글상자  ({Settings.Shared.HotkeyText})", null,
+            (_, _) => ToggleTextBox());
         menu.Items.Add($"브레이크 타이머  ({Settings.Shared.HotkeyBreakTimer})", null,
             (_, _) => ToggleBreakTimer());
         menu.Items.Add($"마우스 스포트라이트  ({Settings.Shared.HotkeyMouseSpotlight})", null,
@@ -321,6 +362,7 @@ public partial class App : Application
              {s.HotkeyVanishingPen} — 그리기 (지워지는 펜으로 바로 시작)
              {s.HotkeyMouseSpotlight} — 마우스 스포트라이트
              {s.HotkeyStickyNote} — 새 메모 띄우기
+             {s.HotkeyText} — 글상자 (그리기를 글자부터 시작)
 
              [확대 화면 안에서]
              마우스 이동 — 확대 지점 이동    휠 / ↑ ↓ — 배율
@@ -329,12 +371,21 @@ public partial class App : Application
 
              [그리기 오버레이 안에서]
              드래그 — 그리기          Shift — 직선
-             Ctrl — 사각형            Ctrl+Shift — 화살표
-             Tab(누른 채) — 타원      휠 — 굵기
-             V — 지워짐/영구 전환     H — 형광펜
+             Ctrl — 사각형            Ctrl+Shift — 화살표 (시작점이 촉)
+             A — 화살표 모드 (끝점이 촉) Tab(누른 채) — 타원
+             X — 지우개 (지나간 자리만)  휠 / ↑ ↓ / [ ] — 굵기
+             V — 지워짐/영구 전환     H — 형광펜 (Shift+색도 형광펜)
              R G B O Y P — 색상       E — 전부 지우기
-             W / K / T — 흰 배경 / 검은 배경 / 투명
-             Ctrl+Z — 실행취소        Esc — 닫기
+             W / K — 흰 칠판 / 검은 칠판   T — 화면으로 돌아오기
+             칠판에서 → / ← — 다음 장 / 앞 장 ("2 / 3" 표시)
+             Ctrl+T — 글상자 모드     M — 메모 띄우기
+             Ctrl+Z — 실행취소
+             Esc — 한 번: 전부 지우기, 지울 게 없으면: 닫기
+
+             [글상자 (Ctrl+T)]
+             빈 곳 클릭 — 글상자 하나 더   테두리 끌기 — 옮기기
+             테두리 더블클릭 — 그 글상자만 삭제   오른쪽 클릭 — 전부 삭제
+             입력 중에도 Ctrl+R G B O Y P — 글자 색, Ctrl+E/W/K/Z 그대로
 
              [브레이크 타이머 위젯]
              드래그 — 이동            휠 — 크기 조절
@@ -381,6 +432,7 @@ public partial class App : Application
         Bind(s.HotkeyVanishingPen, "지워지는 펜", () => ToggleDrawOverlay(startVanishing: true));
         Bind(s.HotkeyMouseSpotlight, "마우스 스포트라이트", () => _spotlight.Toggle());
         Bind(s.HotkeyStickyNote, "메모", () => _stickyNotes.SpawnNote());
+        Bind(s.HotkeyText, "글상자", ToggleTextBox);
 
         if (failed.Count > 0 && _tray is not null)
         {

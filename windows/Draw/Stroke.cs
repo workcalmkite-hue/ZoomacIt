@@ -9,7 +9,10 @@ internal enum ShapeType
     Line,
     Rectangle,
     Ellipse,
-    Arrow
+    /// <summary>ZoomIt식 화살표 — 드래그를 시작한 쪽이 화살촉 (Ctrl+Shift+드래그).</summary>
+    Arrow,
+    /// <summary>파워포인트식 화살표 — 드래그를 끝낸 쪽이 화살촉 (A 화살표 모드).</summary>
+    ArrowForward
 }
 
 /// <summary>맥 원본의 PenColor. 색상 키(R/G/B/O/Y/P)와 1:1 대응.</summary>
@@ -66,4 +69,31 @@ internal sealed class Stroke
 
     /// <summary>생성 시각(초). Stopwatch 기준의 단조 증가 시계.</summary>
     public double CreatedAt { get; init; }
+
+    /// <summary>
+    /// 지우개가 지나가고 «남은» 영역. null이면 지운 적 없음(전부 보임).
+    /// 맥 원본은 비트맵 픽셀을 지우지만, 여기서는 획을 벡터로 들고 있으므로
+    /// 지우개 자국을 뺀 영역으로 획을 잘라(clip) 그려 같은 결과를 낸다.
+    /// </summary>
+    public Geometry? VisibleClip { get; set; }
+
+    public bool IsArrow => ShapeType is ShapeType.Arrow or ShapeType.ArrowForward;
+
+    private Rect? _bounds;
+
+    /// <summary>펜 굵기까지 포함한 획의 영역. 지우개가 닿는지 빠르게 거르는 데 쓴다.</summary>
+    public Rect Bounds
+    {
+        get
+        {
+            if (_bounds is null)
+            {
+                var r = StrokeRenderer.BuildGeometry(this).Bounds;
+                double w = (IsHighlighter ? LineWidth * 4.0 : LineWidth) + 2;
+                if (!r.IsEmpty) r.Inflate(w, w);
+                _bounds = r;
+            }
+            return _bounds.Value;
+        }
+    }
 }

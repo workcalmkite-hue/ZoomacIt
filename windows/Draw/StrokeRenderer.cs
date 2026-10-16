@@ -16,6 +16,8 @@ internal static class StrokeRenderer
         ShapeType.Rectangle => new RectangleGeometry(RectFrom(stroke.Start, stroke.End)),
         ShapeType.Ellipse => EllipsePath(stroke.Start, stroke.End),
         ShapeType.Arrow => ArrowPath(stroke.Start, stroke.End, stroke.LineWidth),
+        // 촉을 드래그 끝으로 — 시작·끝을 바꿔 넘기면 된다 (원본 arrowPath(for:)와 같음)
+        ShapeType.ArrowForward => ArrowPath(stroke.End, stroke.Start, stroke.LineWidth),
         _ => Geometry.Empty
     };
 
@@ -72,32 +74,40 @@ internal static class StrokeRenderer
     }
 
     /// <summary>
-    /// 화살표. **시작점이 화살촉**이다 — 드래그를 시작한 쪽을 가리키는
-    /// ZoomIt 고유 동작을 원본이 따랐고, 여기서도 그대로 유지한다.
+    /// 화살표. **start 쪽이 화살촉**이다 (ZoomIt 고유 동작). 촉을 드래그 끝에 두려면
+    /// 두 점을 바꿔 넘긴다(<see cref="ShapeType.ArrowForward"/>).
+    ///
+    /// 촉은 닫힌 삼각형이라 채워서 그리고, 몸통은 삼각형 밑변에서 멈춘다 —
+    /// 굵은 펜의 둥근 끝이 촉 밖으로 삐져나오지 않게 (맥 원본 v1.3과 같은 모양).
     /// </summary>
     public static Geometry ArrowPath(Point start, Point end, double penWidth)
     {
+        double dx = end.X - start.X, dy = end.Y - start.Y;
+        double length = Math.Sqrt(dx * dx + dy * dy);
+        // 촉은 펜 굵기에 비례하되, 화살표 자체보다 커지지는 않는다.
+        double headLength = Math.Min(Math.Max(24.0, penWidth * 4.5), Math.Max(length * 0.6, 1));
+        const double headAngle = Math.PI / 7; // 약 26도
+
+        double angle = Math.Atan2(dy, dx);
+        var barb1 = new Point(
+            start.X + headLength * Math.Cos(angle + headAngle),
+            start.Y + headLength * Math.Sin(angle + headAngle));
+        var barb2 = new Point(
+            start.X + headLength * Math.Cos(angle - headAngle),
+            start.Y + headLength * Math.Sin(angle - headAngle));
+        var headBase = new Point((barb1.X + barb2.X) / 2, (barb1.Y + barb2.Y) / 2);
+
         var geometry = new StreamGeometry();
         using (var ctx = geometry.Open())
         {
-            // 몸통: 꼬리(end) → 촉(start)
+            // 몸통: 꼬리(end) → 촉의 밑변
             ctx.BeginFigure(end, isFilled: false, isClosed: false);
-            ctx.LineTo(start, isStroked: true, isSmoothJoin: false);
+            ctx.LineTo(headBase, isStroked: true, isSmoothJoin: false);
 
-            double headLength = Math.Max(20.0, penWidth * 3.0);
-            const double headAngle = Math.PI / 6; // 30도
-
-            double angle = Math.Atan2(end.Y - start.Y, end.X - start.X);
-            var barb1 = new Point(
-                start.X + headLength * Math.Cos(angle + headAngle),
-                start.Y + headLength * Math.Sin(angle + headAngle));
-            var barb2 = new Point(
-                start.X + headLength * Math.Cos(angle - headAngle),
-                start.Y + headLength * Math.Sin(angle - headAngle));
-
-            ctx.BeginFigure(barb1, isFilled: false, isClosed: false);
-            ctx.LineTo(start, isStroked: true, isSmoothJoin: false);
-            ctx.LineTo(barb2, isStroked: true, isSmoothJoin: false);
+            // 촉: 닫힌 삼각형 (채움)
+            ctx.BeginFigure(start, isFilled: true, isClosed: true);
+            ctx.LineTo(barb1, isStroked: true, isSmoothJoin: true);
+            ctx.LineTo(barb2, isStroked: true, isSmoothJoin: true);
         }
         geometry.Freeze();
         return geometry;
@@ -126,6 +136,8 @@ internal static class StrokeRenderer
         };
         pen.Freeze();
 
-        dc.DrawGeometry(null, pen, BuildGeometry(stroke));
+        // 화살촉은 채운다(형광펜 화살표는 원본처럼 테두리만).
+        var fill = stroke.IsArrow && !stroke.IsHighlighter ? brush : null;
+        dc.DrawGeometry(fill, pen, BuildGeometry(stroke));
     }
 }

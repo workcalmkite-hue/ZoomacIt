@@ -64,6 +64,100 @@ internal static class RenderTest
     }
 
     /// <summary>
+    /// <c>--draw-test 폴더</c>: 맥 v1.2~1.4에서 옮겨 온 판서 기능(화살표·지우개·칠판 페이지·글상자·Esc)을
+    /// 실제 오버레이 창에서 차례로 실행하고, 단계마다 창을 PNG로 찍고 상태를 로그에 남긴다.
+    /// 마지막 줄 «draw-test 끝»이 로그에 있으면 중간에 예외 없이 끝까지 돈 것이다.
+    /// </summary>
+    public static void DrawFeaturesTest(string outDir, Action onFinished)
+    {
+        Directory.CreateDirectory(outDir);
+        BitmapSource? frozen = null;
+        try { frozen = ScreenCapture.CaptureRegion(ScreenHelper.ScreenContainingMouse().BoundsPx()); }
+        catch (Exception ex) { Log.Write($"draw-test: 화면 얼리기 실패 {ex.Message}"); }
+
+        var window = new DrawOverlayWindow(startVanishing: false, background: frozen);
+        window.Show();
+
+        Stroke Line(PenColor c, Point a, Point b, ShapeType t, double w = 10)
+        {
+            var pts = new List<Point>();
+            for (int i = 0; i <= 20; i++) pts.Add(new Point(a.X + (b.X - a.X) * i / 20, a.Y + (b.Y - a.Y) * i / 20));
+            return new Stroke { Points = pts, Start = a, End = b, Color = c.ToColor(), LineWidth = w, ShapeType = t };
+        }
+
+        var steps = new List<(string name, Action act)>
+        {
+            ("01_screen_strokes", () =>
+            {
+                window.AddStrokeForDiagnostics(Line(PenColor.Red, new(200, 300), new(900, 300), ShapeType.Freehand, 14));
+                window.AddStrokeForDiagnostics(Line(PenColor.Blue, new(200, 450), new(700, 450), ShapeType.ArrowForward, 8));
+                window.AddStrokeForDiagnostics(Line(PenColor.Green, new(200, 600), new(700, 600), ShapeType.Arrow, 8));
+                Log.Write("draw-test " + window.Diag("state"));
+            }),
+            ("02_erased_middle", () => Log.Write("draw-test " + window.Diag("erase", new(550, 250), new(550, 350)))),
+            ("03_eraser_ring", () => Log.Write("draw-test " + window.Diag("eraser", new(800, 450)))),
+            ("04_white_board", () =>
+            {
+                window.Diag("eraser");
+                Log.Write("draw-test " + window.Diag("white"));
+                window.AddStrokeForDiagnostics(Line(PenColor.Blue, new(300, 300), new(800, 500), ShapeType.Freehand));
+            }),
+            ("05_board_page2_text", () =>
+            {
+                Log.Write("draw-test " + window.Diag("next"));
+                Log.Write("draw-test " + window.Diag("text", new(300, 300), text: "글상자 테스트 2쪽"));
+            }),
+            ("06_back_to_page1", () =>
+            {
+                window.Diag("pen");
+                Log.Write("draw-test " + window.Diag("prev"));
+            }),
+            ("07_back_to_screen", () => Log.Write("draw-test " + window.Diag("screen"))),
+            ("08_undo_erase", () => Log.Write("draw-test " + window.Diag("undo"))),
+            ("09_escape_clears", () => Log.Write("draw-test " + window.Diag("escape"))),
+            ("10_undo_clear", () => Log.Write("draw-test " + window.Diag("undo"))),
+        };
+
+        int index = 0;
+        var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(0.8) };
+        timer.Tick += (_, _) =>
+        {
+            try
+            {
+                if (index < steps.Count)
+                {
+                    var (name, act) = steps[index];
+                    act();
+                    window.UpdateLayout();
+                    var bitmap = new RenderTargetBitmap(
+                        (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, PixelFormats.Pbgra32);
+                    bitmap.Render(window);
+                    var encoder = new PngBitmapEncoder();
+                    encoder.Frames.Add(BitmapFrame.Create(bitmap));
+                    using (var stream = File.Create(Path.Combine(outDir, name + ".png")))
+                        encoder.Save(stream);
+                    index++;
+                    return;
+                }
+
+                // 다 지운 뒤 Esc 두 번 = 닫힘
+                window.Diag("escape");
+                Log.Write("draw-test " + window.Diag("escape"));
+                Log.Write("draw-test 끝");
+            }
+            catch (Exception ex)
+            {
+                Log.Write($"draw-test 실패 (단계 {index + 1}): {ex}");
+            }
+
+            timer.Stop();
+            if (window.IsVisible) window.Close();
+            onFinished();
+        };
+        timer.Start();
+    }
+
+    /// <summary>
     /// 라이브 줌 창을 잠깐 띄워 창 내용을 그대로 저장하고 닫는다. 이 창은
     /// 화면 캡처에서 제외돼 있어(무한 거울 방지) 일반 스크린샷으로는 확인할 수 없다.
     /// </summary>

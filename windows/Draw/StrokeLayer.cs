@@ -11,7 +11,8 @@ namespace ZoomacItWin.Draw;
 /// </summary>
 internal sealed class StrokeLayer : FrameworkElement
 {
-    public List<Stroke> Strokes { get; } = new();
+    /// <summary>그릴 획 목록. 칠판 페이지를 넘기면 그 페이지의 목록으로 갈아 끼운다.</summary>
+    public List<Stroke> Strokes { get; set; } = new();
 
     /// <summary>획별 불투명도(사라지는 레이어는 경과 시간 기반, 확정 레이어는 항상 1).</summary>
     public Func<Stroke, double>? AlphaProvider { get; set; }
@@ -24,7 +25,11 @@ internal sealed class StrokeLayer : FrameworkElement
     protected override void OnRender(DrawingContext dc)
     {
         foreach (var stroke in Strokes)
+        {
+            if (stroke.VisibleClip is not null) dc.PushClip(stroke.VisibleClip);
             StrokeRenderer.DrawStroke(dc, stroke, AlphaProvider?.Invoke(stroke) ?? 1.0);
+            if (stroke.VisibleClip is not null) dc.Pop();
+        }
     }
 
     public void Refresh() => InvalidateVisual();
