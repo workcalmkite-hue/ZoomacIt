@@ -219,7 +219,9 @@ internal sealed class DrawOverlayWindow : Window
             _hud.EraserCenter = p;
             _hud.EraserDiameter = EraserWidth;
             _hud.Refresh();
-            if (_isErasing && (p - _lastErasePoint).Length >= 1)
+            // 너무 촘촘히 자르면 남은 영역 모양이 쓸데없이 복잡해져 느려진다 —
+            // 지우개 폭의 1/4쯤마다 한 번씩 (구간을 굵은 선으로 빼므로 틈은 안 생긴다).
+            if (_isErasing && (p - _lastErasePoint).Length >= Math.Max(2, EraserWidth / 4))
             {
                 EraseSegment(_lastErasePoint, p);
                 _lastErasePoint = p;
@@ -239,6 +241,8 @@ internal sealed class DrawOverlayWindow : Window
     {
         if (_isErasing)
         {
+            var end = e.GetPosition(this);
+            if (end != _lastErasePoint) EraseSegment(_lastErasePoint, end);
             _isErasing = false;
             ReleaseMouseCapture();
             if (_eraseBefore is { Count: > 0 })
