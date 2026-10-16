@@ -132,7 +132,7 @@ internal sealed class DrawOverlayWindow : Window
         {
             Activate();
             Focus();
-            Keyboard.Focus(this);
+            FocusCanvas();
             RefreshHud();
             Log.Write($"드로잉 오버레이 열림 — {ActualWidth}x{ActualHeight}, 지워지는 펜={_isVanishing}, 정지화면={background is not null}");
         };
@@ -350,7 +350,7 @@ internal sealed class DrawOverlayWindow : Window
         {
             _textLayer.Children.Remove(b);
             CurrentPage.Texts.Remove(b);
-            Keyboard.Focus(this);
+            FocusCanvas();
         };
         // 클릭한 자리가 글자의 첫 줄 가운데쯤 오게 살짝 올린다.
         Canvas.SetLeft(box, at.X - 9);
@@ -375,7 +375,7 @@ internal sealed class DrawOverlayWindow : Window
     {
         foreach (var box in CurrentPage.Texts) _textLayer.Children.Remove(box);
         CurrentPage.Texts.Clear();
-        Keyboard.Focus(this);
+        FocusCanvas();
     }
 
     /// <summary>Ctrl+T (또는 전역 단축키) — 글상자 모드를 켜고 끈다.</summary>
@@ -405,9 +405,19 @@ internal sealed class DrawOverlayWindow : Window
         else
         {
             RemoveEmptyTextBoxes();
-            Keyboard.Focus(this);
+            FocusCanvas();
         }
         RefreshHud();
+    }
+
+    /// <summary>
+    /// 키보드 초점을 판서 창 자체로 돌린다. 창은 WPF 포커스 범위라서 그냥 Keyboard.Focus(창)을 하면
+    /// 범위가 기억하는 마지막 글상자로 초점이 되돌아간다 — 기억부터 창으로 바꿔 둔다.
+    /// </summary>
+    private void FocusCanvas()
+    {
+        FocusManager.SetFocusedElement(this, this);
+        Keyboard.Focus(this);
     }
 
     private DrawTextBox? FocusedTextBox =>
@@ -800,7 +810,8 @@ internal sealed class DrawOverlayWindow : Window
         }
         return $"{command}: board={_board} page={_boardPageIndex + 1}/{(_board == Board.None ? 1 : _boardPages.Count)} " +
                $"strokes={CurrentPage.Strokes.Count} erased={CurrentPage.Strokes.Count(s => s.VisibleClip is not null)} " +
-               $"texts={CurrentPage.Texts.Count} undo={CurrentPage.Undo.Count} hasContent={HasCanvasContent} open={IsVisible}";
+               $"texts={CurrentPage.Texts.Count} undo={CurrentPage.Undo.Count} hasContent={HasCanvasContent} open={IsVisible} " +
+               $"focus={Keyboard.FocusedElement?.GetType().Name ?? "없음"}";
     }
 
     private void RefreshHud()

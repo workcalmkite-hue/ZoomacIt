@@ -67,6 +67,9 @@ internal sealed class DrawTextBox : Border
     public void SetEditable(bool editable)
     {
         IsHitTestVisible = editable;
+        // 초점도 같이 막는다. 안 막으면 창에 초점을 돌려줄 때 WPF가 «마지막으로 초점을 가졌던
+        // 글상자»로 다시 넘겨서, Esc가 계속 «입력 중» 처리로 빠진다 (윈도우 실측 버그).
+        Box.Focusable = editable;
         BorderBrush = editable ? EditBorder : Brushes.Transparent;
         Background = editable ? GrabFill : Brushes.Transparent;
     }
